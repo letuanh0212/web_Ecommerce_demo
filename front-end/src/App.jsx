@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import axios  from "./unti/axios.cusomize.js"
+import Header from "./component/header.jsx";  
+import { Outlet } from "react-router-dom";
 function App() {
 
     useEffect(() => {
@@ -15,8 +17,11 @@ function App() {
     fetchHello();
   }, [] );
   return (
-    <h1>Welcome to my Website</h1>
-  )
+      <>
+        <Header></Header>
+        <Outlet/>
+      </>
+    )
 }
 
 export default App

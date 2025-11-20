@@ -1,8 +1,8 @@
 import instance from "./axios.cusomize";
 
-const createUserApi = (name, age, city , gmail, password) => {
+const createUserApi = (name,email, phone, address, password) => {
     const URL = "/v1/api/register";
-    const data = {name, age, city , gmail, password} ;
+    const data = {name,email, phone, address, password} ;
 
     return instance.post(URL,data);
 }

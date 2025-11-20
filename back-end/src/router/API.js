@@ -1,6 +1,7 @@
 const express = require("express");
 const routerAPI = require("express").Router();
 const { poolPromise, sql } = require("../config/Sql");
+const  createuser  = require("../controller/userController");
 
 routerAPI.get("/user", async (req, res) => {
     try{    
@@ -17,9 +18,7 @@ routerAPI.get("/", async (req, res) => {
     return res.status(200).json( { message: "API is working" } );
 } );
 
-routerAPI.get("/register", async (req, res) => {
-    return res.status(200).json( { data: "This is some data from POST /data" } );
-}   );
+routerAPI.post("/register", createuser);   
 
 
 module.exports = routerAPI;

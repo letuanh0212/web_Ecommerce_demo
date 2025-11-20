@@ -17,6 +17,9 @@ const START_SERVER = ()=>{
     app.use(cors())
     configViewsEngine(app) 
     
+    //config body parser
+    app.use(express.json()) 
+    app.use(express.urlencoded({ extended: true })) 
     app.use("/v1/api", api)
 
 
@@ -29,7 +32,7 @@ poolPromise.then(() => {
     console.log("\n2. Connected to SQL Database");
     START_SERVER();
 }).catch(err => {
-    console.log("❌ Failed to connect to DB:", err);
+    console.log("Failed to connect to DB:", err);
     process.exit(0);
 });
 

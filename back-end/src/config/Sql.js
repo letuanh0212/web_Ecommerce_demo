@@ -17,16 +17,13 @@ const sqlConfig = {
   }
 }
 
-async function connectToDB() {
-  try {
-    const pool = await sql.connect(sqlConfig);
-    const result = await pool.request().query('SELECT * FROM sys.tables');
-    //console.log(result);
-    console.log("Connected to DB successfully!");
 
-  } catch (err) {
-    console.error("ERROR connecting to Database!!!!!!", err);
-  }
-}
+const poolPromise = new sql.ConnectionPool(sqlConfig)
+  .connect()
+  .then(pool => {
+    console.log(" Connected to DB successfully!");
+    return pool;
+  })
+  .catch(err => console.log("ERROR connecting to Database!!!!!!", err));
 
-module.exports = connectToDB;
+module.exports = { sql, poolPromise };

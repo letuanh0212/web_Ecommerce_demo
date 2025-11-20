@@ -1,35 +1,23 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-
+import { useEffect } from "react";
+import axios  from "./unti/axios.cusomize.js"
 function App() {
-  const [count, setCount] = useState(0)
 
+    useEffect(() => {
+    const fetchHello = async () => {
+      try {  
+        const res = await axios.get(`/v1/api`);
+        console.log(">>> ", import.meta.env.vite_api);
+        console.log("check >>>>>>>>>>>>> ", res);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchHello();
+  }, [] );
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <h1>Welcome to my Website</h1>
   )
 }
 
 export default App
+

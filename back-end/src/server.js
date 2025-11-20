@@ -14,6 +14,7 @@ const START_SERVER = ()=>{
 
     //app.use(cors)
     configViewsEngine(app) 
+    
     app.use("/v1/api", api)
     app.get("/",async (req,res)=>{    
         res.send('<h1>Welcome to Tuanh is Website </h1>')

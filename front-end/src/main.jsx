@@ -8,7 +8,7 @@ import UserPage from './pages/User.jsx';
 import RegisterPage from './pages/Register.jsx';
 import LoginPage from './pages/Login.jsx';
 
-import 'antd/dist/reset.css'; // Import CSS AntD
+import 'antd/dist/reset.css'; 
 
 const router = createBrowserRouter([
   {

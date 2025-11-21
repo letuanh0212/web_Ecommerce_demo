@@ -5,9 +5,8 @@ const express = require("express")
 const {poolPromise} = require('./config/Sql');
 const configViewsEngine = require('./config/configEngine')
 const api = require('./router/API')
-
 const cors = require("cors")
-//const configViewsEngine = require ('./config/configEngine.js')
+
 const START_SERVER = ()=>{
     const app = express()
 
@@ -27,7 +26,9 @@ const START_SERVER = ()=>{
         console.log(`\n3. Server is running at http://${HOST}:${PORT}`)
     });
 }
+
 console.log("\n1.Connected to Sql Server\n")
+
 poolPromise.then(() => {
     console.log("\n2. Connected to SQL Database");
     START_SERVER();

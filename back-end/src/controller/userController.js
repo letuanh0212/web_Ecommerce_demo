@@ -17,7 +17,6 @@ const loginUser = async(req, res) => {
   if (!data.success) {
     return res.status(400).json({ message: data.message });
   }
-
   const user = data.user;
   const token = jwt.sign({
       id: user.id,

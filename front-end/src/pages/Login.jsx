@@ -9,29 +9,35 @@ import 'antd/dist/reset.css';
 const LoginPage = () => {
     const navigate = useNavigate(); 
     const onFinish = async (values) => {
-    try {
-        //console.log("values >>>", values); // phải ra {name, password}
-        const res = await LoginApi(values.name, values.password);
-        console.log("Login response >>>", res);
+        try {
+            const res = await LoginApi(values.name, values.password);
+            console.log("Login response >>>", res);
 
-        if(res?.access_token){
+            if (res?.token) {
+                localStorage.setItem("token", res.token);
+                localStorage.setItem("user", JSON.stringify(res.user));
+                window.dispatchEvent(new Event("storageUpdate"));
+                console.log("Token saved!");
+            }
 
-            localStorage.setItem("access_token", res.access_token);
-            console.log("Token saved!");
-        }
+            notification.success({
+                message: "Login Success",
+                description: `Welcome ${res.user.name}`,
+                duration: 2
+            });
 
+            setTimeout(() => {
+                if (res.user.role === "seller") navigate("/seller-store");
+                else if (res.user.role === "admin") navigate("/admin-dashboard");
+                else navigate("/");
+            }, 200);
 
-        localStorage.setItem("user_info", JSON.stringify(res.user));
-
-        notification.success({ message: "Login Success" ,description: `Welcome ${res.user.name}`,duration: 2 });
-        setTimeout(() => {
-          navigate('/');
-        }, 100);
-      } catch (err) {
+        } catch (err) {
             console.error(err);
             notification.error({ message: "Login Failed" });
         }
     };
+
 
 
     return (
@@ -70,14 +76,8 @@ const LoginPage = () => {
                 </Form.Item>
             </Form>
         </div>
-
     )
-
-
 }
-
-
-
 
 export default LoginPage;
 

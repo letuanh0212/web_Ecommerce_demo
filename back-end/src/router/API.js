@@ -1,7 +1,8 @@
 const express = require("express");
 const routerAPI = require("express").Router();
 const { poolPromise, sql } = require("../config/Sql");
-
+const verifyToken = require("../middleware/verify_token");
+const checkRole = require('../middleware/verify_token');
 const {createUser, loginUser} = require("../controller/userController");
 
 // routerAPI.get("/user", async (req, res) => {
@@ -22,6 +23,14 @@ routerAPI.get("/", async (req, res) => {
 routerAPI.post("/register", createUser);   
 
 routerAPI.post('/login',loginUser);
+
+routerAPI.get('/store', verifyToken, checkRole(['seller']), (req, res) => {
+    res.json({ message: "Welcome seller!", user: req.user });
+});
+
+routerAPI.get('/admin-dashboard', verifyToken, checkRole(['admin']), (req, res) => {
+    res.json({ message: "Welcome admin!", user: req.user });
+});
 
 module.exports = routerAPI;
 

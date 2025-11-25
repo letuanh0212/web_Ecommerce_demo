@@ -30,7 +30,6 @@ const createUserService = async (name,email, phone, address, password) =>{
 };
 
 const loginUserService = async (name, password) =>{
-  
   try {
     const pool = await poolPromise;
     const userResult = await pool.request()

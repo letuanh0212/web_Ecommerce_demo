@@ -8,6 +8,9 @@ import UserPage from './pages/User.jsx';
 import RegisterPage from './pages/Register.jsx';
 import LoginPage from './pages/Login.jsx';
 
+import AdminPage from './pages/admin-dashboard.jsx';
+import StorePage from './pages/seller-store.jsx';
+
 import 'antd/dist/reset.css'; 
 
 const router = createBrowserRouter([
@@ -15,11 +18,14 @@ const router = createBrowserRouter([
     path: '/',
     element: <App />,
     children: [
-      { path: '', element: <HomePage /> },       // Home
-      { path: 'user', element: <UserPage /> },   // User
-      { path: 'register', element: <RegisterPage /> } // Register
+      { path: '', element: <HomePage /> },       
+      { path: 'user', element: <UserPage /> },   
+      { path: 'register', element: <RegisterPage /> } ,
+      { path: '/admin-dashboard', element: <AdminPage /> },
+        { path: '/seller-store', element: <StorePage /> }
     ]
   },
+
   { path: '/login', element: <LoginPage /> }
 ]);
 

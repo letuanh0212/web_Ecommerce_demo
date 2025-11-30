@@ -6,7 +6,7 @@ const {poolPromise, sql} = require('../config/Sql');
 const bcrypt = require('bcrypt');
 
 const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS);
-const createUserService = async (name,email, phone, address, password) =>{
+const createUserService = async (name,email, phone, address, password,role) =>{
   
   try {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -17,9 +17,10 @@ const createUserService = async (name,email, phone, address, password) =>{
       .input("phone", sql.Int, phone)
       .input("address", sql.NVarChar, address)
       .input("password", sql.NVarChar, hashedPassword)
+      .input("role", sql.NVarChar, role)
       .query(`
-        INSERT INTO Users (name, email, phone, address, password)
-        VALUES (@name, @email, @phone, @address, @password)
+        INSERT INTO Users (name, email, phone, address, password,role)
+        VALUES (@name, @email, @phone, @address, @password, @role)
       `);
 
     return result;
@@ -52,4 +53,30 @@ const loginUserService = async (name, password) =>{
     throw err;
   }
 };
-module.exports = { createUserService ,loginUserService};
+
+
+const GetAllUsersService = async () => {
+  try {
+    const pool = await poolPromise;
+    const userResult = await pool.request().query(`select * from Users where role = 'user'`);
+     
+
+    return userResult.recordset;
+  }catch (err) {
+    console.error("SQL Error:", err);
+    throw err;
+  }
+};
+const GetAllSellersService = async () => {
+  try {
+    const pool = await poolPromise;
+    const sellersResult = await pool.request().query(`select * from Users where role = 'seller'`);
+     
+    return sellersResult.recordset;
+  }catch (err) {
+    console.error("SQL Error:", err);
+    throw err;
+  }
+};
+
+module.exports = { createUserService, loginUserService, GetAllUsersService, GetAllSellersService };

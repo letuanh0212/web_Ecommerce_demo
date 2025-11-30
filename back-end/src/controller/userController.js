@@ -1,12 +1,12 @@
 require('dotenv').config();
-const { createUserService,loginUserService } = require('../service/userService');
+const { createUserService,loginUserService,GetAllUsersService ,GetAllSellersService} = require('../service/userService');
 const jwt = require("jsonwebtoken");
 
 
 const createUser = async(req, res) => {
   console.log("Check request>>>>>>>>>>>> ", req.body);
-  const { name,email, phone, address, password} = req.body;
-  const data =  await createUserService(name,email, phone, address, password)
+  const { name,email, phone, address, password,role} = req.body;
+  const data =  await createUserService(name,email, phone, address, password,role)
   return res.status(201).json({'message': 'User created successfully' });
 }  
 
@@ -33,5 +33,24 @@ const loginUser = async(req, res) => {
   });
 }  
 
+const GetAllUsers = async (req, res) => {
+  try {
+    const users = await GetAllUsersService(); 
+    return users;
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+const GetAllsellers = async (req, res) => {
+  try {
+    const sellers = await GetAllSellersService(); 
+    return sellers;
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
-module.exports = {createUser,loginUser};
+
+module.exports = {createUser,loginUser,GetAllUsers,GetAllsellers};

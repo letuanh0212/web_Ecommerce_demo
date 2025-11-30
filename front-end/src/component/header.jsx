@@ -7,19 +7,18 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [current, setCurrent] = useState(location.pathname);
-  const [userRole, setUserRole] = useState(null); // lưu role user/seller
+  const [userRole, setUserRole] = useState(null); 
 
   useEffect(() => {
-    const checkLogin = () => {
-      const token = localStorage.getItem("token");
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (token && user) {
-        setUserRole(user.role); // 'user' hoặc 'seller'
-      } else {
-        setUserRole(null); // chưa login
-      }
-    };
-
+  const checkLogin = () => {
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || null);
+    if (token && user) {
+      setUserRole(user.role);
+    } else {
+      setUserRole(null);
+    }
+  };
     checkLogin();
     window.addEventListener("storageUpdate", checkLogin);
 
@@ -37,6 +36,7 @@ const Header = () => {
 
   const guestMenu = [
     { label: <Link to="/">Home</Link>, key: '/', icon: <MailOutlined /> },
+    { label: <Link to="/cart">Cart</Link>, key: '/cart', icon: <ShoppingCartOutlined /> },
     {
       label: 'Account',
       key: 'account',
@@ -54,18 +54,15 @@ const Header = () => {
     { label: <span onClick={logout}>Logout</span>, key: 'logout', icon: <LogoutOutlined /> },
   ];
 
-  const sellerMenu = [
-    { label: <Link to="/">Home</Link>, key: '/', icon: <MailOutlined /> },
-    { label: <Link to="/seller-store">Seller Store</Link>, key: '/seller-store', icon: <ShoppingCartOutlined /> },
-    { label: <span onClick={logout}>Logout</span>, key: 'logout', icon: <LogoutOutlined /> },
-  ];
 
 
   let menuToShow = guestMenu;
   if (userRole === 'user') menuToShow = userMenu;
-  else if (userRole === 'seller') menuToShow = sellerMenu;
 
   return <Menu onClick={onClick} selectedKeys={[current]} mode="horizontal" items={menuToShow} />;
 };
 
 export default Header;
+
+
+

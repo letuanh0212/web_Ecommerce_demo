@@ -3,31 +3,58 @@ import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import App from './App.jsx';
-import HomePage from './pages/Home.jsx';
-import UserPage from './pages/User.jsx';
-import RegisterPage from './pages/Register.jsx';
-import LoginPage from './pages/Login.jsx';
-
-import AdminPage from './pages/admin-dashboard.jsx';
-import StorePage from './pages/seller-store.jsx';
+import HomePage from './pages/user/Home.jsx';
+import UserPage from './pages/user/User.jsx';
+import RegisterPage from './pages/user/Register.jsx';
+import LoginPage from './pages/user/Login.jsx';
+import Admin from './pages/admin/Admin.jsx';
+import Seller from './pages/seller/Seller.jsx';
+import GetAllUsers from './pages/admin/getalluser.jsx';
+import GetallSellers from './pages/admin/getallseller.jsx';
+import RegisterStore from './pages/seller/StoreRegister.jsx';
+import StorePage from './pages/seller/StorePage.jsx'; 
 
 import 'antd/dist/reset.css'; 
 
+
 const router = createBrowserRouter([
+
   {
     path: '/',
     element: <App />,
     children: [
       { path: '', element: <HomePage /> },       
       { path: 'user', element: <UserPage /> },   
-      { path: 'register', element: <RegisterPage /> } ,
-      { path: '/admin-dashboard', element: <AdminPage /> },
-        { path: '/seller-store', element: <StorePage /> }
+      
+
     ]
   },
 
+  
+  {
+    path: '/Admin',
+    element: <Admin />,  
+    children: [
+      { path: 'users', element: <GetAllUsers /> },
+      { path: 'sellers', element: <GetallSellers /> },
+      
+    ]
+  },
+
+
+  {
+    path: '/Seller',
+    element: <Seller />,
+    children: [
+      { path: 'store' , element: <StorePage /> },
+      {path: 'registerStore', element: <RegisterStore /> }
+  
+    ]
+  },
+  { path: 'register', element: <RegisterPage /> },
   { path: '/login', element: <LoginPage /> }
 ]);
+
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

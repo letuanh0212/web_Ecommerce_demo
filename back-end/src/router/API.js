@@ -1,20 +1,10 @@
 const express = require("express");
 const routerAPI = require("express").Router();
 const { poolPromise, sql } = require("../config/Sql");
-const verifyToken = require("../middleware/verify_token");
-const checkRole = require('../middleware/verify_token');
-const {createUser, loginUser} = require("../controller/userController");
+const { verifyToken, checkRole } = require('../middleware/verify_token');
+const {createUser, loginUser, GetAllUsers,GetAllsellers} = require("../controller/userController");
+const { checkStore, checkStoreController } = require("../controller/sellerController");
 
-// routerAPI.get("/user", async (req, res) => {
-//     try{    
-//         const pool = await poolPromise;
-//         const result = await pool.request().query("SELECT * FROM Users");
-//         res.json(result.recordset);
-//     }  
-//     catch(err){
-//         return res.status(500).json( { message: err.message } );
-//     }
-// });
 
 routerAPI.get("/", async (req, res) => {
     return res.status(200).json( { message: "API is working" } );
@@ -24,13 +14,58 @@ routerAPI.post("/register", createUser);
 
 routerAPI.post('/login',loginUser);
 
-routerAPI.get('/store', verifyToken, checkRole(['seller']), (req, res) => {
-    res.json({ message: "Welcome seller!", user: req.user });
+
+routerAPI.get('/users', verifyToken, checkRole(['admin']), async (req, res) => {
+    try {
+        const users = await GetAllUsers();
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ message: "controller error" });
+    }
 });
 
-routerAPI.get('/admin-dashboard', verifyToken, checkRole(['admin']), (req, res) => {
-    res.json({ message: "Welcome admin!", user: req.user });
+routerAPI.get('/sellers', verifyToken, checkRole(['admin']), async (req, res) => {
+    try {
+        const sellers = await GetAllsellers();
+        res.json(sellers);
+    } catch (err) {
+        res.status(500).json({ message: "controller error " });
+    }
 });
+
+
+
+
+routerAPI.get('/seller/store/:userId', verifyToken, checkRole(['seller']), async (req, res) => {
+    try {
+        const sellerId = req.params.userId;
+        console.log("Raw sellerId from params:", sellerId);
+
+        if (!sellerId) return res.status(400).json({ message: "Missing sellerId" });
+
+        const hasStore = await checkStoreController(sellerId); 
+        return res.status(200).json({ hasStore }); 
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: err.message });
+    }
+});
+
+routerAPI.get('/seller/store/:owner_id', verifyToken, checkRole(['seller']), async (req, res) => {
+    try {
+        const sellerId = req.params.userId;
+        console.log("Raw sellerId from params:", sellerId);
+
+        if (!sellerId) return res.status(400).json({ message: "Missing sellerId" });
+
+        const hasStore = await checkStoreController(sellerId); 
+        return res.status(200).json({ hasStore }); 
+    } catch (err) {
+        console.error(err);c
+        return res.status(500).json({ message: err.message });
+    }
+});
+
 
 module.exports = routerAPI;
 

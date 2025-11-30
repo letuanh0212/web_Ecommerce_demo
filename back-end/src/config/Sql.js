@@ -7,13 +7,13 @@ const sqlConfig = {
   database: process.env.DB_NAME,
   server: 'localhost',
   pool: {
-    max: 10,
-    min: 0,
+    max: 30,
+    min: 3,
     idleTimeoutMillis: 30000
   },
   options: {
-    encrypt: false, 
-    trustServerCertificate: false 
+    encrypt: false, // for azure
+    trustServerCertificate: true 
   }
 }
 
@@ -21,9 +21,12 @@ const sqlConfig = {
 const poolPromise = new sql.ConnectionPool(sqlConfig)
   .connect()
   .then(pool => {
-    console.log(" Connected to DB successfully!");
+    console.log("Connected to DB successfully!");
     return pool;
   })
-  .catch(err => console.log("ERROR connecting to Database!!!!!!", err));
+  .catch(err => {
+    console.error("ERROR connecting to Database", err);
+    process.exit(1); 
+  });
 
 module.exports = { sql, poolPromise };

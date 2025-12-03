@@ -4,7 +4,7 @@ import {
 } from "antd";
 import { ShoppingCartOutlined, SearchOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import { getAllProductsApi, getAllCategoriesApi } from "../../unti/api";
+import { getAllProductsApi, getAllCategoriesApi } from "../unti/api";
 
 const { Meta } = Card;
 const { Title } = Typography;
@@ -18,7 +18,7 @@ const HomePage = () => {
   
   const navigate = useNavigate();
 
-  // 1. Load dữ liệu khi vào trang
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -40,7 +40,7 @@ const HomePage = () => {
     fetchData();
   }, []);
 
-  // 2. Xử lý lọc theo danh mục
+
   const handleTabChange = (key) => {
     setActiveCategory(key);
     if (key === "all") {
@@ -51,9 +51,9 @@ const HomePage = () => {
     }
   };
 
-  // 3. Xử lý thêm vào giỏ hàng (Lưu LocalStorage)
+
   const handleAddToCart = (product) => {
-    // Lấy giỏ hàng hiện tại từ LocalStorage
+
     let cart = JSON.parse(localStorage.getItem("cart")) || [];
     
     // Kiểm tra sản phẩm đã có chưa

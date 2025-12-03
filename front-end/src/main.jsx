@@ -1,13 +1,14 @@
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import 'antd/dist/reset.css'; // Import CSS của Ant Design
+import 'antd/dist/reset.css';
 
-// Layout & App
+// Components & Layout
 import App from './App.jsx';
+import ProtectedRoute from './component/ProtectedRoute.jsx';
 
 // User Pages
-import HomePage from './pages/user/Home.jsx';
+import HomePage from './pages/Home.jsx';
 import UserPage from './pages/user/User.jsx';
 import RegisterPage from './pages/user/Register.jsx';
 import LoginPage from './pages/user/Login.jsx';
@@ -51,10 +52,18 @@ const router = createBrowserRouter([
     ]
   },
 
-  // ====================== Admin Routes ======================
+  // ====================== Auth Routes ======================
+  { path: '/register', element: <RegisterPage /> },
+  { path: '/login', element: <LoginPage /> },
+
+  // ====================== Admin Routes (Protected) ======================
   {
     path: '/Admin',
-    element: <Admin />,
+    element: (
+      <ProtectedRoute roles={['admin']}>
+        <Admin />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <Admin_Dashboard /> },
       { path: 'dashboard', element: <Admin_Dashboard /> },
@@ -67,10 +76,14 @@ const router = createBrowserRouter([
     ]
   },
 
-  // ====================== Seller Routes ======================
+  // ====================== Seller Routes (Protected) ======================
   {
     path: '/Seller',
-    element: <Seller />,
+    element: (
+      <ProtectedRoute roles={['seller']}>
+        <Seller />
+      </ProtectedRoute>
+    ),
     children: [
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'store', element: <StorePage /> },
@@ -83,11 +96,7 @@ const router = createBrowserRouter([
       { path: 'articles/create', element: <AddArticle /> },
       { path: 'articles/edit/:id', element: <AddArticle /> }
     ]
-  },
-
-  // ====================== Auth Routes ======================
-  { path: '/register', element: <RegisterPage /> },
-  { path: '/login', element: <LoginPage /> }
+  }
 ]);
 
 createRoot(document.getElementById('root')).render(

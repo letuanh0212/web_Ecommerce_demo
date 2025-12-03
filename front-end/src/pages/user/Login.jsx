@@ -12,6 +12,9 @@ const LoginPage = () => {
 
     const onFinish = async (values) => {
         try {
+                localStorage.clear();
+                sessionStorage.clear();
+
             const { email, password, remember } = values;
             const res = await LoginApi(email, password);
 

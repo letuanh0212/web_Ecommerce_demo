@@ -10,6 +10,7 @@
   "author": "team 7",
   "license": "ISC",
   "dependencies": {
+    "@elastic/elasticsearch": "^9.2.0",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",

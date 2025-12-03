@@ -12,8 +12,8 @@ const createUser = async(req, res) => {
 
 const loginUser = async(req, res) => {
   console.log("check request>>>>>>>>>>>> ", req.body);
-  const { name, password } = req.body;
-  const data = await loginUserService(name, password);
+  const { email, password } = req.body;
+  const data = await loginUserService(email, password);
   if (!data.success) {
     return res.status(400).json({ message: data.message });
   }

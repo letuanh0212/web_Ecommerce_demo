@@ -2,9 +2,9 @@ const express = require("express");
 const routerAPI = require("express").Router();
 const { poolPromise, sql } = require("../config/Sql");
 const { verifyToken, checkRole } = require('../middleware/verify_token');
-const {createUser, loginUser, GetAllUsers,GetAllsellers} = require("../controller/userController");
+const {createUser, loginUser, GetAllUsers,GetAllsellers } = require("../controller/userController");
 const { checkStore, checkStoreController } = require("../controller/sellerController");
-
+const { searchItems } = require("../controller/elasticSearchController");
 
 routerAPI.get("/", async (req, res) => {
     return res.status(200).json( { message: "API is working" } );
@@ -66,6 +66,7 @@ routerAPI.get('/seller/store/:owner_id', verifyToken, checkRole(['seller']), asy
     }
 });
 
+routerAPI.get('/search', searchItems);
 
 module.exports = routerAPI;
 

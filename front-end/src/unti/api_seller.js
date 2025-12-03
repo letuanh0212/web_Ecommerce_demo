@@ -7,6 +7,7 @@ const getItemsByStoreApi = (storeId) => {
   return instance.get(URL);
 };
 
+
 // CREATE item
 const createItemApi = (data) => {
   const URL = `/v1/api/seller/items`;
@@ -25,9 +26,21 @@ const deleteItemApi = (itemId) => {
   return instance.delete(URL);
 };
 
+//CREATE category
+const createCategoryApi = (storeId, name ,decription,parent_id,image) => {  
+  const URL = `/v1/api/seller/categories`;
+  return instance.post(URL, storeId ,name ,decription,parent_id,image);
+}
+const getCategoriesByStoreApi = (storeId) => {
+  const URL = `/v1/api/seller/categories/${storeId}`;
+  return instance.get(URL);
+}
+
 export {
   getItemsByStoreApi,
   createItemApi,
   updateItemApi,
   deleteItemApi,
+  createCategoryApi,
+  getCategoriesByStoreApi
 };

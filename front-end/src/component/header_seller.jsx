@@ -15,19 +15,23 @@ export default function SellerHeader() {
     setUser(storedUser);
 
     if (storedUser?.role === "seller") {
-      getcheckStoreApi(storedUser.id)
-        .then(res => {
+  getcheckStoreApi(storedUser.id)
+    .then(res => {
+      const store = res.hasStore ?? null;
 
-          setHasStore(res.hasStore ?? false);
-        })
-        .catch(err => {
-          console.error("Error checking store:", err);
-          setHasStore(false);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+      if (store) {
+       
+        localStorage.setItem("store", JSON.stringify(store));
+      }
+
+      setHasStore(!!store); 
+    })
+    .catch(err => {
+      console.error("Error checking store:", err);
+      setHasStore(false);
+    })
+    .finally(() => setLoading(false));
+  }
   }, []);
 
   const logout = () => {
@@ -51,7 +55,7 @@ export default function SellerHeader() {
       label: <Link to="registerStore">Register Store</Link>,
       key: 'storeRegister',
       icon: <ShopOutlined />
-    });
+    }); 
   }
 
   return <Menu mode="horizontal" items={menuItems} />;

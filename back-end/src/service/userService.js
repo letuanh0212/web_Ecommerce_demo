@@ -30,13 +30,13 @@ const createUserService = async (name,email, phone, address, password,role) =>{
   }
 };
 
-const loginUserService = async (name, password) =>{
+const loginUserService = async (email, password) =>{
   try {
     const pool = await poolPromise;
     const userResult = await pool.request()
-      .input("name", sql.NVarChar, name)
+      .input("email", sql.NVarChar, email)
       .query(`
-        select * from Users where name=@name
+        select * from Users where email=@email
       `);
     if (userResult.recordset.length === 0) {
       throw new Error("User not found");

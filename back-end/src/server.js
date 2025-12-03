@@ -5,7 +5,12 @@ const express = require("express")
 const {poolPromise} = require('./config/Sql');
 const configViewsEngine = require('./config/configEngine')
 const api = require('./router/API')
-const cors = require("cors")
+const cors = require("cors");
+
+const { createIndex } = require('./model/elasticSearch_Item');
+const { syncItems } = require('./service/elastic_Query');
+
+
 
 const START_SERVER = ()=>{
     const app = express()
@@ -29,8 +34,14 @@ const START_SERVER = ()=>{
 
 console.log("\n1.Connected to Sql Server\n")
 
-poolPromise.then(() => {
+poolPromise.then(async () => {
     console.log("\n2. Connected to SQL Database");
+        
+    await createIndex();
+
+
+    await syncItems();
+
     START_SERVER();
 }).catch(err => {
     console.log("Failed to connect to DB:", err);

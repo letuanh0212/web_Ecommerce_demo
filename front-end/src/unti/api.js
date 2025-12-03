@@ -7,14 +7,12 @@ const createUserApi = (name,email, phone, address, password,role) => {
     return instance.post(URL,data);
 }
 
-const LoginApi = (name, password) => {
+const LoginApi = (email, password) => {
     const URL = "/v1/api/login";
-    const data = {name, password} ;
+    const data = {email, password} ;
 
     return instance.post(URL,data);
 }
-
-
 
 const getUserApi = () => {
     const URL = "/v1/api/users";

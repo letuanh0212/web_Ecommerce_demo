@@ -12,8 +12,8 @@ const LoginPage = () => {
 
     const onFinish = async (values) => {
         try {
-            const { name, password, remember } = values;
-            const res = await LoginApi(name, password);
+            const { email, password, remember } = values;
+            const res = await LoginApi(email, password);
 
             if (res?.token) {
                 if (remember) {
@@ -72,11 +72,11 @@ const LoginPage = () => {
 
                 <Form layout="vertical" onFinish={onFinish}>
                     <Form.Item
-                        label="Name"
-                        name="name"
-                        rules={[{ required: true, message: "Please input your Name!" }]}
+                        label="email"
+                        name="email"
+                        rules={[{ required: true, message: "Please input your email!" }]}
                     >
-                        <Input size="large" placeholder="Enter your name" />
+                        <Input size="large" placeholder="Enter your email" />
                     </Form.Item>
 
                     <Form.Item

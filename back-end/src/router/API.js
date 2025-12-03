@@ -6,6 +6,7 @@ const {createUser, loginUser, GetAllUsers,GetAllsellers } = require("../controll
 const { checkStore, checkStoreController } = require("../controller/sellerController");
 const { searchItems } = require("../controller/elasticSearchController");
 
+
 routerAPI.get("/", async (req, res) => {
     return res.status(200).json( { message: "API is working" } );
 } );
@@ -67,6 +68,18 @@ routerAPI.get('/seller/store/:owner_id', verifyToken, checkRole(['seller']), asy
 });
 
 routerAPI.get('/search', searchItems);
+
+
+
+
+routerAPI.use("/items", require("./item.routes"));
+routerAPI.use("/categories", require("./category.routes"));
+
+routerAPI.use("/articles", require("./article.routes"));
+routerAPI.use("/stores", require("./store.routes"));
+routerAPI.use("/orders", require("./order.routes"));
+
+
 
 module.exports = routerAPI;
 

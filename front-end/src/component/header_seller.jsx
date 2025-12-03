@@ -11,27 +11,30 @@ export default function SellerHeader() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user"));
+    const storedUser = JSON.parse(
+      localStorage.getItem("user") || sessionStorage.getItem("user")
+    );
     setUser(storedUser);
 
     if (storedUser?.role === "seller") {
-  getcheckStoreApi(storedUser.id)
-    .then(res => {
-      const store = res.hasStore ?? null;
+      getcheckStoreApi(storedUser.id)
+        .then(res => {
+          const store = res.hasStore ?? null;
 
-      if (store) {
-       
-        localStorage.setItem("store", JSON.stringify(store));
-      }
+          if (store) {
+            localStorage.setItem("store", JSON.stringify(store));
+          }
 
-      setHasStore(!!store); 
-    })
-    .catch(err => {
-      console.error("Error checking store:", err);
-      setHasStore(false);
-    })
-    .finally(() => setLoading(false));
-  }
+          setHasStore(!!store);
+        })
+        .catch(err => {
+          console.error("Error checking store:", err);
+          setHasStore(false);
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const logout = () => {
@@ -42,8 +45,7 @@ export default function SellerHeader() {
     navigate("/login");
   };
 
-  if (loading) return null; 
-  if (!user) return null;
+  if (loading || !user) return null;
 
   const menuItems = [
     { label: <Link to="store">Store</Link>, key: 'store', icon: <ShopOutlined /> },
@@ -55,7 +57,7 @@ export default function SellerHeader() {
       label: <Link to="registerStore">Register Store</Link>,
       key: 'storeRegister',
       icon: <ShopOutlined />
-    }); 
+    });
   }
 
   return <Menu mode="horizontal" items={menuItems} />;

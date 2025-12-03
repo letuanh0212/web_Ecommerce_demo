@@ -11,9 +11,11 @@ const NavbarSeller = () => {
       label: 'Products',
       icon: <AppstoreOutlined />,
       children: [
-        { key: 'list', label: <Link to="/products">Product List</Link> },
-        { key: 'create', label: <Link to="/products/create">Add Product</Link> },
-        { key: 'categories', label: <Link to="/categories">Categories</Link> },
+        { key: 'dashboard', label: <Link to="/Seller/dashboard">Dashboard</Link> },
+        { key: 'list', label: <Link to="/Seller/products">Product List</Link> },
+        { key: 'categories', label: <Link to="/Seller/store">Categories</Link> },
+        { key: 'orders', label: <Link to="/Seller/orders">Orders</Link> },
+        { key: 'articles', label: <Link to="/Seller/articles">Marketing Articles</Link>, },
       ],
     },
   ];

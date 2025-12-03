@@ -24,7 +24,7 @@ const START_SERVER = ()=>{
     //config body parser
     app.use(express.json()) 
     app.use(express.urlencoded({ extended: true })) 
-    app.use("/v1/api", api)
+    app.use("/api", api)
 
 
     app.listen( PORT, HOST, () => {

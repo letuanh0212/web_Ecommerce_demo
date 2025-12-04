@@ -78,7 +78,7 @@ const AddArticle = () => {
             <Input />
           </Form.Item>
 
-          <Form.Item label="Gắn thẻ sản phẩm" name="item_id" rules={[{ required: true }]}>
+          <Form.Item label="Gắn thẻ sản phẩm" name="item_id" rules={[{ required: false }]}>
             <Select placeholder="Chọn sản phẩm trong shop">
               {items.map(i => <Select.Option key={i.id} value={i.id}>{i.name}</Select.Option>)}
             </Select>

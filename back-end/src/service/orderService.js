@@ -1,13 +1,13 @@
 const { poolPromise, sql } = require("../config/Sql");
 
-// 1. Tạo đơn hàng (Có Transaction)
+
 const createOrderService = async (userId, items) => {
-    // Tính tổng tiền
+ 
     let total_amount = 0;
     items.forEach(item => {
         total_amount += item.price * item.quantity;
     });
-    let final_amount = total_amount; // Chưa tính voucher (sẽ tính ở API khác hoặc update sau)
+    let final_amount = total_amount; 
 
     const pool = await poolPromise;
     const transaction = new sql.Transaction(pool);
@@ -15,7 +15,7 @@ const createOrderService = async (userId, items) => {
     try {
         await transaction.begin();
 
-        // A. Insert Order
+     
         const orderRequest = new sql.Request(transaction);
         const orderResult = await orderRequest
             .input("user_id", sql.Int, userId)
@@ -29,9 +29,7 @@ const createOrderService = async (userId, items) => {
         
         const newOrderId = orderResult.recordset[0].id;
 
-        // B. Insert Order Items & Trừ kho (Tùy chọn: Ở đây chỉ lưu item, trừ kho có thể làm trigger hoặc code riêng)
-        // Trong code cũ bạn chưa trừ kho khi đặt, chỉ cộng kho khi hủy. 
-        // Tốt nhất là TRỪ KHO ngay khi đặt.
+
         for (const item of items) {
             const itemRequest = new sql.Request(transaction);
             await itemRequest
@@ -44,12 +42,6 @@ const createOrderService = async (userId, items) => {
                 .query(`
                     INSERT INTO OrderItems (order_id, item_id, variant_id, quantity, price, subtotal)
                     VALUES (@order_id, @item_id, @variant_id, @quantity, @price, @subtotal);
-
-                    -- Trừ kho ItemVariants (nếu có)
-                    IF @variant_id IS NOT NULL
-                        UPDATE ItemVariants SET stock = stock - @quantity WHERE id = @variant_id;
-                    
-                    -- Trừ kho Items gốc
                     UPDATE Items SET stock = stock - @quantity WHERE id = @item_id;
                 `);
         }

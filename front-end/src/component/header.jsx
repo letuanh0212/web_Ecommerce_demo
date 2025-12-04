@@ -17,9 +17,6 @@ const Header = () => {
   const [current, setCurrent] = useState(location.pathname);
   const [userRole, setUserRole] = useState(null);
 
-  // ======================
-  // 1. CHECK LOGIN
-  // ======================
   useEffect(() => {
     const checkLogin = () => {
       const token =
@@ -43,9 +40,7 @@ const Header = () => {
     return () => window.removeEventListener("storageUpdate", checkLogin);
   }, [location]);
 
-  // ======================
-  // 2. LOGOUT
-  // ======================
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -56,16 +51,16 @@ const Header = () => {
     navigate("/login");
   };
 
-  // ======================
-  // 3. SEARCH → CLICK PRODUCT
-  // ======================
-  const handleSearchSelect = (product) => {
-    navigate(`/product/${product.id}`);
-  };
 
-  // ======================
-  // 4. MENU ITEMS
-  // ======================
+  const handleSearchSelect = (product) => {
+    if (product.isSearchText) {
+      // Enter để tìm kiếm theo text
+      navigate(`/search?query=${product.name}`);
+    } else {
+      // Chọn product trong dropdown
+      navigate(`/product/${product.id}`);
+    }
+  };
 
   // Guest (chưa login)
   const guestItems = [
@@ -104,9 +99,7 @@ const Header = () => {
 
   const menuItems = userRole ? userItems : guestItems;
 
-  // ======================
-  // 5. UI STYLE
-  // ======================
+
   const headerStyle = {
     position: "sticky",
     top: 0,
@@ -131,9 +124,16 @@ const Header = () => {
       </h2>
 
       {/* SEARCH BAR */}
-      <div style={{ flex: 1, padding: "0 40px", maxWidth: "600px" }}>
-        <HeaderSearch onSelectResult={handleSearchSelect} />
-      </div>
+      <HeaderSearch
+            onSelectResult={(item) => {
+              if (item?.isSearchText) {
+                navigate(`/search?q=${item.name}`);
+              } else {
+                navigate(`/product/${item.id}`);
+              }
+            }}
+       />
+
 
       {/* RIGHT SIDE */}
       <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>

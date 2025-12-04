@@ -15,6 +15,7 @@ import LoginPage from './pages/user/Login.jsx';
 import CartPage from './pages/user/CartPage.jsx';
 import BlogPage from './pages/user/BlogPage.jsx';
 import ArticleDetail from './pages/user/ArticleDetail.jsx';
+import SearchPage from './pages/SearchPage.jsx';
 
 // Admin Pages
 import Admin from './pages/admin/Admin.jsx';
@@ -48,7 +49,8 @@ const router = createBrowserRouter([
       { path: 'user', element: <UserPage /> },
       { path: 'cart', element: <CartPage /> },
       { path: 'blog', element: <BlogPage /> },
-      { path: 'blog/:id', element: <ArticleDetail /> }
+      { path: 'blog/:id', element: <ArticleDetail /> },
+      { path: 'search', element: <SearchPage /> },
     ]
   },
 
@@ -85,6 +87,7 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
+      { index: true, element: <Dashboard /> },
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'store', element: <StorePage /> },
       { path: 'products', element: <ProductList /> },

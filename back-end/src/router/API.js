@@ -6,6 +6,8 @@ const {createUser, loginUser, GetAllUsers,GetAllsellers } = require("../controll
 const { checkStore, checkStoreController } = require("../controller/sellerController");
 const { searchItems } = require("../controller/elasticSearchController");
 const { recommendForUser } = require("../controller/recommenderController");
+const { sendEmail } = require("../controller/emailController");
+
 
 
 routerAPI.get("/", async (req, res) => {
@@ -89,60 +91,29 @@ routerAPI.get("/user/:userId", async (req, res) => {
         if (!recommended || recommended.length === 0)
             return res.json([]);
 
-        // Lấy danh sách ID
         const ids = recommended.map(r => r.id).join(",");
 
         const pool = await poolPromise;
         const query = `
             SELECT 
-                i.id, i.name, i.price, 
-                c.name AS category_name,
-                v.id AS variant_id, v.size, v.color, v.pattern,
-                img.image
+                i.id, i.name, i.price, i.description,i.stock, 
+                c.name AS category_name
             FROM Items i
             LEFT JOIN Categories c ON c.id = i.category_id
-            LEFT JOIN ItemVariants v ON v.item_id = i.id
-            LEFT JOIN ItemImages img ON img.item_id = i.id
             WHERE i.id IN (${ids})
         `;
 
         const result = await pool.request().query(query);
         const rows = result.recordset;
 
-        // Group theo item
-        const items = {};
-
-        rows.forEach(r => {
-            if (!items[r.id]) {
-                items[r.id] = {
-                    id: r.id,
-                    name: r.name,
-                    price: r.price,
-                    category_name: r.category_name,
-                    variants: [],
-                    images: []
-                };
-            }
-
-            if (r.variant_id) {
-                items[r.id].variants.push({
-                    id: r.variant_id,
-                    size: r.size,
-                    color: r.color,
-                    pattern: r.pattern
-                });
-            }
-
-            if (r.image) {
-                items[r.id].images.push(r.image);
-            }
+        // Map ra theo đúng thứ tự score
+        const finalResult = recommended.map(r => {
+            const item = rows.find(i => i.id === r.id);
+            return {
+                ...item,        // id, name, price, category_name
+                score: r.score  // thêm score
+            };
         });
-
-        // Giữ đúng thứ tự recommendation
-        const finalResult = recommended.map(r => ({
-            ...r,
-            ...items[r.id]
-        }));
 
         res.json(finalResult);
 
@@ -153,6 +124,11 @@ routerAPI.get("/user/:userId", async (req, res) => {
 });
 
 
+routerAPI.get("/email", sendEmail);
+
+
+
+
 routerAPI.use("/items", require("./item.routes"));
 routerAPI.use("/categories", require("./category.routes"));
 
@@ -160,7 +136,7 @@ routerAPI.use("/articles", require("./article.routes"));
 routerAPI.use("/stores", require("./store.routes"));
 routerAPI.use("/orders", require("./order.routes"));
 
-
+routerAPI.use("/item-variants", require("./itemVariant.routes"));
 
 module.exports = routerAPI;
 

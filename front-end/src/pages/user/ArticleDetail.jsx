@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { 
@@ -10,6 +11,7 @@ import {
   ShoppingCartOutlined 
 } from "@ant-design/icons";
 import { getArticleDetailApi, likeArticleApi } from "../../unti/api";
+import { addToCart } from "../../unti/cart"; // <--- IMPORT HÀM CART
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -23,34 +25,23 @@ const ArticleDetail = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [userRole, setUserRole] = useState(null);
 
-  // Biến cờ hiệu để chặn gọi api 2 lần
   const hasFetched = useRef(false);
 
-  // 1. Logic kiểm tra Login & Role
   useEffect(() => {
     const checkLogin = () => {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      const user = JSON.parse(
-        localStorage.getItem("user") || sessionStorage.getItem("user") || null
-      );
-
-      if (token && user) {
-        setUserRole(user.role);
-      } else {
-        setUserRole(null);
-      }
+      const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user") || null);
+      if (token && user) setUserRole(user.role);
+      else setUserRole(null);
     };
-
     checkLogin();
     window.addEventListener("storageUpdate", checkLogin);
     return () => window.removeEventListener("storageUpdate", checkLogin);
   }, [location]);
 
-  // 2. Logic lấy chi tiết bài viết
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
-
     const fetchDetail = async () => {
       try {
         const res = await getArticleDetailApi(id);
@@ -65,23 +56,20 @@ const ArticleDetail = () => {
     fetchDetail();
   }, [id]);
 
-  // 3. Logic Like (Đã fix lỗi bắt đăng nhập lại)
   const handleLike = async () => {
     const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-    
     if (!token) {
         message.warning("Vui lòng đăng nhập để Like bài viết!");
         navigate("/login"); 
         return;
     }
-
     try {
       await likeArticleApi(id); 
       setLikeCount(prev => prev + 1);
       message.success("Đã thích bài viết!");
     } catch (err) {
       if (err.response && err.response.status === 401) {
-         message.error("Phiên đăng nhập hết hạn, vui lòng đăng nhập lại.");
+         message.error("Phiên đăng nhập hết hạn.");
          setUserRole(null);
          localStorage.removeItem("token");
          sessionStorage.removeItem("token");
@@ -99,7 +87,6 @@ const ArticleDetail = () => {
     <div style={{ background: "#f5f5f5", minHeight: "100vh", padding: "20px 0" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 20px" }}>
         
-        {/* Nút quay lại */}
         <Button 
             type="link" 
             icon={<ArrowLeftOutlined />} 
@@ -110,8 +97,7 @@ const ArticleDetail = () => {
         </Button>
 
         <Row gutter={[24, 24]}>
-          
-          {/* --- CỘT TRÁI: NỘI DUNG BÀI VIẾT (Chiếm 2/3 màn hình) --- */}
+          {/* CỘT TRÁI */}
           <Col xs={24} lg={16}>
             <div style={{ background: "#fff", padding: 40, borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
               <Title level={2} style={{ marginTop: 0 }}>{article.title}</Title>
@@ -134,9 +120,7 @@ const ArticleDetail = () => {
                       {article.description}
                   </Paragraph>
               </Typography>
-
               <Divider />
-              
               <div style={{ textAlign: "center" }}>
                   <Button 
                       type={userRole ? "primary" : "default"}
@@ -147,20 +131,13 @@ const ArticleDetail = () => {
                   >
                       Thích bài viết ({likeCount})
                   </Button>
-                  
-                  {!userRole && (
-                    <div style={{ marginTop: 10, fontSize: 12, color: '#999' }}>
-                        (Đăng nhập để tương tác)
-                    </div>
-                  )}
+                  {!userRole && <div style={{ marginTop: 10, fontSize: 12, color: '#999' }}>(Đăng nhập để tương tác)</div>}
               </div>
             </div>
           </Col>
 
-          {/* --- CỘT PHẢI: THÔNG TIN SHOP & SẢN PHẨM (Chiếm 1/3 màn hình) --- */}
+          {/* CỘT PHẢI */}
           <Col xs={24} lg={8}>
-            
-            {/* 1. THẺ THÔNG TIN SHOP */}
             <Card 
               title={<span><ShopOutlined /> Thông tin Shop</span>}
               style={{ marginBottom: 20, borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}
@@ -168,7 +145,7 @@ const ArticleDetail = () => {
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
                 <Avatar 
                     size={80} 
-                    src={article.store_image || "https://via.placeholder.com/150"} 
+                    src={article.store_image || "https://placehold.co/150x150?text=Shop"} 
                     icon={<ShopOutlined />}
                     style={{ marginBottom: 10, border: '1px solid #ddd' }}
                 />
@@ -177,20 +154,14 @@ const ArticleDetail = () => {
                     <EnvironmentOutlined /> {article.store_address || "Địa chỉ chưa cập nhật"}
                 </div>
               </div>
-              
-              {/* Nút ghé thăm Store */}
               {article.store_id && (
-                <Button 
-                    type="primary" 
-                    block 
-                    onClick={() => navigate(`/store/${article.store_id}`)}
-                >
+                <Button type="primary" block onClick={() => navigate(`/store/${article.store_id}`)}>
                     Ghé thăm Cửa hàng
                 </Button>
               )}
             </Card>
 
-            {/* 2. THẺ SẢN PHẨM ĐƯỢC GẮN KÈM (Nếu có) */}
+            {/* THẺ SẢN PHẨM TRONG BÀI VIẾT */}
             {article.item_id && (
                 <Card 
                   title={<span style={{color: '#ff4d4f'}}>🔥 Sản phẩm trong bài</span>} 
@@ -200,8 +171,9 @@ const ArticleDetail = () => {
                   <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
                     <img 
                         alt="product" 
-                        src={article.item_image || "https://via.placeholder.com/100"} 
+                        src={article.item_image ? article.item_image : "https://placehold.co/100x100?text=No+Product"} 
                         style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }} 
+                        onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/100x100?text=Error"; }}
                     />
                     <div style={{ flex: 1 }}>
                         <Text strong style={{ display: 'block', marginBottom: 5, lineHeight: '1.2' }}>
@@ -210,22 +182,43 @@ const ArticleDetail = () => {
                         <Text type="danger" strong style={{ fontSize: 16 }}>
                             {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(article.item_price || 0)}
                         </Text>
-                        <div style={{ marginTop: 10 }}>
+                        
+                        {/* --- NÚT CHỨC NĂNG (Flex row) --- */}
+                        <div style={{ marginTop: 10, display: 'flex', gap: 5 }}>
                             <Button 
-                                type="primary" 
                                 size="small" 
                                 ghost
-                                icon={<ShoppingCartOutlined />} 
+                                type="primary"
                                 onClick={() => navigate(`/product/${article.item_id}`)}
                             >
                                 Xem chi tiết
                             </Button>
+
+                            <Button 
+                                type="primary" 
+                                size="small" 
+                                icon={<ShoppingCartOutlined />} 
+                                onClick={() => {
+                                    // Chuẩn bị dữ liệu item từ bài viết để lưu vào cart
+                                    const productToAdd = {
+                                        id: article.item_id,
+                                        name: article.item_name,
+                                        price: article.item_price,
+                                        image: article.item_image,
+                                        store_name: article.store_name,
+                                        stock: 99 // Mặc định stock nếu API không trả về
+                                    };
+                                    addToCart(productToAdd);
+                                }}
+                            >
+                                Thêm
+                            </Button>
                         </div>
+
                     </div>
                   </div>
                 </Card>
             )}
-
           </Col>
         </Row>
       </div>

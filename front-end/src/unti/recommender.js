@@ -1,14 +1,23 @@
-import instance from "./axios.cusomize";
+import instance from "./axios.cusomize";   // <-- SỬA ĐÚNG CHỮ customize
 
-// Gọi API gợi ý sản phẩm cho user đã đăng nhập
 const recommenderApi = async (userId) => {
   try {
-    const URL = `/api/user/${userId}`; // truyền userId trong URL
+    const URL = `/api/user/${userId}`;
     const response = await instance.get(URL);
-    return response.data; // { recommended: [...] }
+
+    // API có thể trả { recommended: [...] } hoặc []
+    if (Array.isArray(response.data?.recommended)) {
+      return response.data.recommended;
+    }
+
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+
+    return [];
   } catch (error) {
     console.error("Error calling recommender API:", error);
-    return { recommended: [] }; // fallback nếu lỗi
+    return [];
   }
 };
 

@@ -127,7 +127,16 @@ const HomePage = () => {
             marginBottom: "25px",
           }}
         >
-          <HomeRecommended recommended={recommended} loading={loadingRecommend} />
+
+
+          <HomeRecommended
+            recommended={recommended}
+            loading={loadingRecommend}
+            onOpenModal={(product) => {
+              setSelectedProduct(product);
+              setIsModalVisible(true);
+            }}
+          />
         </div>
 
         {/* PRODUCTS */}

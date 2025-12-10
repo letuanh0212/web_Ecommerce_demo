@@ -1,9 +1,10 @@
 require('dotenv').config();
-const { VNPay, ignoreLogger } = require("vnpay");
+
+const { VNPay, ignoreLogger, ProductCode,VnpLocale,dateFormat } = require("vnpay");
 
 const vnpay = new VNPay({
     // ⚡ Cấu hình bắt buộc
-    tmnCode: process.env.VNP_TMNCODE || '2QXUI4B4',
+    tmnCode: process.env.VNP_TMNCODE ,
     secureSecret: process.env.VNP_HASHSECRET,
     vnpayHost: 'https://sandbox.vnpayment.vn',
 

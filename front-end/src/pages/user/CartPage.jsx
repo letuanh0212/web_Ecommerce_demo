@@ -49,48 +49,62 @@ const CartPage = () => {
   };
 
   const handleCheckout = async () => {
-    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-    if (!token) {
-        message.warning("Bạn cần đăng nhập để thanh toán!");
-        navigate("/login");
-        return;
-    }
-    if (cartItems.length === 0) {
-        message.error("Giỏ hàng trống!");
-        return;
-    }
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
 
-    try {
-        setLoading(true);
-        // Gửi variant_id lên server
-        const orderItems = cartItems.map(item => ({
-            item_id: item.id,
-            variant_id: item.variant_id || null, // QUAN TRỌNG: Gửi ID biến thể
-            quantity: item.quantity,
-            price: item.price
-        }));
+      if (!token) {
+          message.warning("Bạn cần đăng nhập để thanh toán!");
+          navigate("/login");
+          return;
+      }
 
-        await axios.post("/api/orders", { items: orderItems }, { headers: { Authorization: `Bearer ${token}` } });
+      if (cartItems.length === 0) {
+          message.error("Giỏ hàng trống!");
+          return;
+      }
 
-        message.success("Đặt hàng thành công! Kiểm tra lịch sử đơn hàng.");
-        clearCart(); 
-        setCartItems([]);
-        setTotalPrice(0);
-        navigate("/user"); 
-    } catch (err) {
-        if (err.response && err.response.status === 401) {
-            message.error("Phiên đăng nhập hết hạn.");
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            sessionStorage.removeItem("token");
-            sessionStorage.removeItem("user");
-            navigate("/login");
-        } else {
-            message.error(err.response?.data?.message || "Lỗi thanh toán.");
-        }
-    } finally {
-        setLoading(false);
-    }
+      try {
+          setLoading(true);
+
+          const orderItems = cartItems.map(item => ({
+              item_id: item.id,
+              variant_id: item.variant_id || null,
+              quantity: item.quantity,
+              price: item.price
+          }));
+          console.log("Checkout currentUser:", currentUser);
+          console.log("Checkout email:", currentUser?.email);
+
+          await axios.post(
+              "/api/orders",
+              {
+                  items: orderItems,
+                  email: currentUser?.email   
+              },
+              {
+                  headers: { Authorization: `Bearer ${token}` }
+              }
+          );
+
+          message.success("Đặt hàng thành công! Kiểm tra lịch sử đơn hàng.");
+          clearCart();
+          setCartItems([]);
+          setTotalPrice(0);
+          navigate("/user");
+
+      } catch (err) {
+          if (err.response && err.response.status === 401) {
+              message.error("Phiên đăng nhập hết hạn.");
+              localStorage.removeItem("token");
+              localStorage.removeItem("user");
+              sessionStorage.removeItem("token");
+              sessionStorage.removeItem("user");
+              navigate("/login");
+          } else {
+              message.error(err.response?.data?.message || "Lỗi thanh toán.");
+          }
+      } finally {
+          setLoading(false);
+      }
   };
 
   const columns = [

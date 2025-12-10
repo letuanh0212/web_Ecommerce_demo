@@ -1,17 +1,20 @@
-import instance from "./axios.cusomize";   // <-- SỬA ĐÚNG CHỮ customize
+
+
+import instance from "./axios.cusomize";   // instance đã unwrap `response.data` trong interceptor
 
 const recommenderApi = async (userId) => {
   try {
     const URL = `/api/user/${userId}`;
+    // instance.get trả về trực tiếp `response.data` vì interceptor đã unwrap
     const response = await instance.get(URL);
 
-    // API có thể trả { recommended: [...] } hoặc []
-    if (Array.isArray(response.data?.recommended)) {
-      return response.data.recommended;
+    // response có thể là { recommended: [...] } hoặc mảng trực tiếp
+    if (Array.isArray(response?.recommended)) {
+      return response.recommended;
     }
 
-    if (Array.isArray(response.data)) {
-      return response.data;
+    if (Array.isArray(response)) {
+      return response;
     }
 
     return [];

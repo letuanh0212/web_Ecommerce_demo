@@ -1,63 +1,62 @@
-const { poolPromise, sql } = require("../config/Sql");
+const { poolPromise } = require("../config/Sql");
+const { analyzeTextES } = require("./elasticAnalyze");
 
+// LẤY ITEM + TẠO TEXT TF-IDF
+const getItemsWithText = async () => {
+    const pool = await poolPromise;
 
-const getItemsWithFeatures = async () => {
-    try {
-        const pool = await poolPromise;
+    // Query lấy items từ SQL
+    const result = await pool.request().query(`
+        SELECT 
+            i.id, 
+            i.name, 
+            i.description, 
+            c.name AS category_name
+        FROM Items i
+        LEFT JOIN Categories c ON i.category_id = c.id
+        ORDER BY i.id DESC
+    `);
 
-        const result = await pool.request().query(`
-            SELECT 
-                i.id AS item_id, 
-                i.name, 
-                i.category_id, 
-                i.price
-            FROM Items i
-        `);
+    const items = result.recordset;   // <<--- BẠN BỊ MẤT DÒNG NÀY
 
-        const itemsRaw = result.recordset;
-        if (!itemsRaw.length) return [];
+    // Phân tích text bằng Elasticsearch, CHẠY TUẦN TỰ để tránh lỗi 429
+    const itemsWithKeywords = [];
 
-        const categories = [...new Set(itemsRaw.map(i => i.category_id))];
-        const maxPrice = Math.max(...itemsRaw.map(i => i.price));
+    for (const item of items) {
+        const combined = `${item.name} ${item.description} ${item.category_name}`;
+        const keywords = await analyzeTextES(combined);
 
-        const encodeItem = (item) => {
-            const categoryVec = categories.map(c => (c === item.category_id ? 1 : 0));
-            const priceNorm = [item.price / maxPrice];
-            return [...categoryVec, ...priceNorm];
-        };
-
-        return itemsRaw.map(item => ({
-            id: item.item_id,
+        itemsWithKeywords.push({
+            id: item.id,
             name: item.name,
-            category_id: item.category_id,
-            price: item.price,
-            features: encodeItem(item)
-        }));
+            text: keywords
+        });
 
-    } catch (err) {
-        console.error("Error getting items:", err);
-        return [];
+        // Nghỉ 50ms để Elasticsearch không quá tải
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
+
+    return itemsWithKeywords;
 };
 
 
-// Lấy lịch sử user
+// LẤY LỊCH SỬ USER ĐÃ XEM / MUA
 const getUserHistory = async (userId) => {
-    try {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input("userId", sql.Int, userId)
-            .query(`
-                SELECT oi.item_id
-                FROM Orders o
-                JOIN OrderItems oi ON o.id = oi.order_id
-                WHERE o.user_id = @userId
-            `);
-        return result.recordset.map(r => r.item_id);
-    } catch (err) {
-        console.error("Error getting user history:", err);
-        return [];
-    }
+    const pool = await poolPromise;
+
+    const result = await pool.request().query(`
+        SELECT oi.item_id
+        FROM OrderItems oi
+        INNER JOIN Orders o ON oi.order_id = o.id
+        WHERE o.user_id = ${userId}
+        ORDER BY o.createdAt DESC
+    `);
+
+    // Trả về mảng [item_id, item_id, ...]
+    return result.recordset.map(r => r.item_id);
 };
 
-module.exports = { getItemsWithFeatures, getUserHistory };
+module.exports = { 
+    getItemsWithText,
+    getUserHistory
+};

@@ -7,7 +7,7 @@ const { checkStore, checkStoreController } = require("../controller/sellerContro
 const { searchItems } = require("../controller/elasticSearchController");
 const { recommendForUser } = require("../controller/recommenderController");
 const { sendEmail } = require("../controller/emailController");
-
+const {createVnpayPayment,vnpayReturn}  = require("../controller/paymentController")
 
 
 routerAPI.get("/", async (req, res) => {
@@ -72,16 +72,7 @@ routerAPI.get('/seller/store/:owner_id', verifyToken, checkRole(['seller']), asy
 
 routerAPI.get('/search', searchItems);
 
-// routerAPI.get("/user/:userId", async (req, res) => {
-//     try {
-//         const userId = parseInt(req.params.userId);
-//         const recommended = await recommendForUser(userId);
-//         res.json({ recommended });
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ message: "Error recommending products" });
-//     }
-// });
+
 
 routerAPI.get("/user/:userId", async (req, res) => {
     try {
@@ -125,18 +116,22 @@ routerAPI.get("/user/:userId", async (req, res) => {
 
 
 routerAPI.get("/email", sendEmail);
+routerAPI.get("/email", sendEmail);
+
+routerAPI.post("/vnpay/create", createVnpayPayment);
+routerAPI.get("/vnpay/return", vnpayReturn);
 
 
 
 
 routerAPI.use("/items", require("./item.routes"));
 routerAPI.use("/categories", require("./category.routes"));
+routerAPI.use("/item-variants", require("./itemVariant.routes"));
 
 routerAPI.use("/articles", require("./article.routes"));
-routerAPI.use("/stores", require("./store.routes"));
 routerAPI.use("/orders", require("./order.routes"));
+routerAPI.use("/stores", require("./store.routes"));
 
-routerAPI.use("/item-variants", require("./itemVariant.routes"));
 
 module.exports = routerAPI;
 

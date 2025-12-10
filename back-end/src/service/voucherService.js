@@ -1,105 +1,257 @@
 const { poolPromise, sql } = require("../config/Sql");
 
-const createVoucherService = async (data) => {
-    try {
-        const { code, description, discount_type, discount_value, min_order_value, quantity, start_date, end_date } = data;
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input("code", sql.NVarChar, code.toUpperCase())
-            .input("description", sql.NVarChar, description)
-            .input("discount_type", sql.NVarChar, discount_type)
-            .input("discount_value", sql.Decimal(18, 2), discount_value)
-            .input("min_order_value", sql.Decimal(18, 2), min_order_value || 0)
-            .input("quantity", sql.Int, quantity || 100)
-            .input("start_date", sql.DateTime, start_date || new Date())
-            .input("end_date", sql.DateTime, end_date)
-            .query(`
-                INSERT INTO Vouchers (code, description, discount_type, discount_value, min_order_value, quantity, start_date, end_date)
-                OUTPUT INSERTED.*
-                VALUES (@code, @description, @discount_type, @discount_value, @min_order_value, @quantity, @start_date, @end_date)
-            `);
-        return result.recordset[0];
-    } catch (err) {
-        throw new Error(err.message);
-    }
+// CHECK OWNER OF STORE
+const checkStoreOwnership = async (storeId, userId) => {
+    const pool = await poolPromise;
+    const result = await pool.request()
+        .input("id", sql.Int, storeId)
+        .query(`SELECT owner_id FROM Stores WHERE id=@id`);
+
+    if (result.recordset.length === 0) return false;
+    return result.recordset[0].owner_id === userId;
 };
 
-const checkVoucherService = async (code, orderTotal) => {
+// CHECK DUPLICATE VOUCHER CODE
+const checkDuplicateCode = async (code, storeId) => {
     const pool = await poolPromise;
     const result = await pool.request()
         .input("code", sql.NVarChar, code)
-        .query("SELECT * FROM Vouchers WHERE code = @code");
-
-    if (result.recordset.length === 0) throw new Error("Voucher not found");
-    const voucher = result.recordset[0];
-
-    if (voucher.quantity <= 0) throw new Error("Voucher is out of stock");
-    
-    const now = new Date();
-    if (now < voucher.start_date || now > voucher.end_date) throw new Error("Voucher expired");
-    if (orderTotal < voucher.min_order_value) throw new Error(`Order must be at least ${voucher.min_order_value}`);
-
-    let discountAmount = 0;
-    if (voucher.discount_type === 'fixed') {
-        discountAmount = voucher.discount_value;
-    } else {
-        discountAmount = (orderTotal * voucher.discount_value) / 100;
-    }
-
-    return { 
-        valid: true, 
-        voucher_id: voucher.id,
-        discount_amount: discountAmount,
-        final_total: orderTotal - discountAmount 
-    };
-};
-
-const getAllVouchersService = async () => {
-    const pool = await poolPromise;
-    const result = await pool.request().query("SELECT * FROM Vouchers");
-    return result.recordset;
-};
-
-// --- BỔ SUNG CÁC HÀM CÒN THIẾU ---
-
-const updateVoucherService = async (id, data) => {
-    const { description, min_order_value, quantity, end_date } = data;
-    const pool = await poolPromise;
-    await pool.request()
-        .input("id", sql.Int, id)
-        .input("description", sql.NVarChar, description)
-        .input("min_order_value", sql.Decimal(18, 2), min_order_value)
-        .input("quantity", sql.Int, quantity)
-        .input("end_date", sql.DateTime, end_date)
+        .input("store_id", sql.Int, storeId)
         .query(`
-            UPDATE Vouchers
-            SET description = @description,
-                min_order_value = @min_order_value,
-                quantity = @quantity,
-                end_date = @end_date,
-                updatedAt = GETDATE()
-            WHERE id = @id
+            SELECT id FROM Vouchers
+            WHERE code=@code AND store_id=@store_id
         `);
-    return true;
+
+    return result.recordset.length > 0;
 };
 
-const deleteVoucherService = async (id) => {
+// CREATE
+const createVoucherService = async (data, userId) => {
     try {
+        const {
+            store_id,
+            code,
+            discount_type,
+            discount_value,
+            min_order_value,
+            quantity,
+            start_date,
+            end_date
+        } = data;
+
+        // Check owner
+        const isOwner = await checkStoreOwnership(store_id, userId);
+        if (!isOwner) throw new Error("Forbidden: You are not the owner of this store");
+
+        // Check duplicate code
+        const exists = await checkDuplicateCode(code, store_id);
+        if (exists) throw new Error("Voucher code already exists in this store");
+
         const pool = await poolPromise;
-        await pool.request()
-            .input("id", sql.Int, id)
-            .query("DELETE FROM Vouchers WHERE id = @id");
-        return true;
+
+        const result = await pool.request()
+            .input("store_id", sql.Int, store_id)
+            .input("code", sql.NVarChar, code)
+            .input("discount_type", sql.VarChar, discount_type)
+            .input("discount_value", sql.Decimal(18, 2), discount_value)
+            .input("min_order_value", sql.Decimal(18, 2), min_order_value)
+            .input("quantity", sql.Int, quantity)
+            .input("start_date", sql.DateTime, start_date)
+            .input("end_date", sql.DateTime, end_date)
+            .query(`
+                INSERT INTO Vouchers
+                (store_id, code, discount_type, discount_value, min_order_value, quantity, start_date, end_date)
+                OUTPUT INSERTED.*
+                VALUES (@store_id, @code, @discount_type, @discount_value, @min_order_value, @quantity, @start_date, @end_date)
+            `);
+
+        return result.recordset[0];
+
     } catch (err) {
-        if (err.number === 547) throw new Error("Cannot delete voucher. It has been used in orders.");
         throw new Error(err.message);
     }
 };
 
-module.exports = { 
-    createVoucherService, 
-    checkVoucherService, 
-    getAllVouchersService,
-    updateVoucherService, // Nhớ export
-    deleteVoucherService  // Nhớ export
+// GET ALL BY STORE
+const getVouchersByStoreService = async (storeId) => {
+    const pool = await poolPromise;
+    const result = await pool.request()
+        .input("store_id", sql.Int, storeId)
+        .query(`
+            SELECT *
+            FROM Vouchers
+            WHERE store_id=@store_id
+            ORDER BY id DESC
+        `);
+    return result.recordset;
+};
+
+// GET BY CODE (LOCAL ONLY – REMOVE GLOBAL)
+const getVoucherByCodeService = async (code, storeId) => {
+    const pool = await poolPromise;
+
+    const result = await pool.request()
+        .input("code", sql.NVarChar, code)
+        .input("store_id", sql.Int, storeId)
+        .query(`
+            SELECT *
+            FROM Vouchers
+            WHERE code=@code
+            AND store_id=@store_id
+            AND quantity > 0
+            AND start_date <= GETDATE()
+            AND end_date >= GETDATE()
+        `);
+
+    return result.recordset[0] || null;
+};
+
+// UPDATE
+const updateVoucherService = async (id, data, userId) => {
+    try {
+        const pool = await poolPromise;
+
+        // Get voucher
+        const voucherRes = await pool.request()
+            .input("id", sql.Int, id)
+            .query("SELECT store_id, code FROM Vouchers WHERE id=@id");
+
+        if (voucherRes.recordset.length === 0)
+            throw new Error("Voucher does not exist");
+
+        const { store_id, code: oldCode } = voucherRes.recordset[0];
+
+        // Check owner
+        const isOwner = await checkStoreOwnership(store_id, userId);
+        if (!isOwner) throw new Error("Forbidden: Not owner");
+
+        // Check duplicate code if changing code
+        if (data.code && data.code !== oldCode) {
+            const exists = await checkDuplicateCode(data.code, store_id);
+            if (exists) throw new Error("Voucher code already exists");
+        }
+
+        const {
+            code,
+            discount_type,
+            discount_value,
+            min_order_value,
+            quantity,
+            start_date,
+            end_date
+        } = data;
+
+        await pool.request()
+            .input("id", sql.Int, id)
+            .input("code", sql.NVarChar, code)
+            .input("discount_type", sql.VarChar, discount_type)
+            .input("discount_value", sql.Decimal(18, 2), discount_value)
+            .input("min_order_value", sql.Decimal(18, 2), min_order_value)
+            .input("quantity", sql.Int, quantity)
+            .input("start_date", sql.DateTime, start_date)
+            .input("end_date", sql.DateTime, end_date)
+            .query(`
+                UPDATE Vouchers
+                SET code=@code, discount_type=@discount_type, discount_value=@discount_value,
+                    min_order_value=@min_order_value, quantity=@quantity,
+                    start_date=@start_date, end_date=@end_date
+                WHERE id=@id
+            `);
+
+        return true;
+
+    } catch (err) {
+        throw new Error(err.message);
+    }
+};
+
+// DELETE
+const deleteVoucherService = async (id, userId) => {
+    const pool = await poolPromise;
+
+    const voucherRes = await pool.request()
+        .input("id", sql.Int, id)
+        .query("SELECT store_id FROM Vouchers WHERE id=@id");
+
+    if (voucherRes.recordset.length === 0)
+        throw new Error("Voucher does not exist");
+
+    const storeId = voucherRes.recordset[0].store_id;
+
+    const isOwner = await checkStoreOwnership(storeId, userId);
+    if (!isOwner) throw new Error("Forbidden: Not owner");
+
+    await pool.request()
+        .input("id", sql.Int, id)
+        .query("DELETE FROM Vouchers WHERE id=@id");
+
+    return true;
+};
+
+// APPLY VOUCHER
+const applyVoucherService = async (userId, storeId, code, orderId) => {
+    try {
+        const pool = await poolPromise;
+
+        // Get voucher
+        const voucher = await getVoucherByCodeService(code, storeId);
+        if (!voucher) throw new Error("Invalid or expired voucher");
+
+        // Get order
+        const orderRes = await pool.request()
+            .input("id", sql.Int, orderId)
+            .query("SELECT * FROM Orders WHERE id=@id");
+
+        if (orderRes.recordset.length === 0)
+            throw new Error("Order does not exist");
+
+        const order = orderRes.recordset[0];
+
+        // CHECK store of order
+        if (order.store_id !== storeId)
+            throw new Error("Voucher does not belong to this store");
+
+        // CHECK min value
+        if (order.total_amount < voucher.min_order_value)
+            throw new Error("Order does not meet minimum value");
+
+        // CALCULATE
+        let discount = voucher.discount_type === "percent"
+            ? order.total_amount * (voucher.discount_value / 100)
+            : voucher.discount_value;
+
+        if (discount > order.total_amount) discount = order.total_amount;
+
+        const finalAmount = order.total_amount - discount;
+
+        // UPDATE ORDER
+        await pool.request()
+            .input("id", sql.Int, orderId)
+            .input("final_amount", sql.Decimal(18, 2), finalAmount)
+            .query(`
+                UPDATE Orders
+                SET final_amount=@final_amount
+                WHERE id=@id
+            `);
+
+        // REDUCE QUANTITY
+        await pool.request()
+            .input("id", sql.Int, voucher.id)
+            .query("UPDATE Vouchers SET quantity = quantity - 1 WHERE id=@id");
+
+        return { success: true, discount, finalAmount };
+
+    } catch (err) {
+        throw new Error(err.message);
+    }
+};
+
+module.exports = {
+    checkStoreOwnership,
+    createVoucherService,
+    getVouchersByStoreService,
+    getVoucherByCodeService,
+    updateVoucherService,
+    deleteVoucherService,
+    applyVoucherService
 };

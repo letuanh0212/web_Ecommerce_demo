@@ -20,7 +20,7 @@ const START_SERVER = ()=>{
 
     app.use(cors())
     configViewsEngine(app) 
-    app.use('/',api)
+    //app.use('/',api)
     //config body parser
     app.use(express.json()) 
     app.use(express.urlencoded({ extended: true })) 

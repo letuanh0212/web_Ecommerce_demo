@@ -1,7 +1,6 @@
-// src/service/recommenderService.js
 const { poolPromise } = require("../config/Sql");
 
-// Lấy items + build text (KHÔNG gọi ES analyze ở runtime)
+// Lấy items + build text TF-IDF
 const getItemsWithText = async () => {
   const pool = await poolPromise;
 
@@ -16,15 +15,14 @@ const getItemsWithText = async () => {
 
   const items = result.recordset || [];
 
-  // Tạo text gộp sẵn (dùng khi build TF-IDF)
   return items.map(it => ({
     id: it.id,
     name: it.name,
-    text: `${it.name || ''} ${it.description || ''} ${it.category_name || ''}`.trim()
+    text: `${it.name} ${it.description} ${it.category_name}`.trim()
   }));
 };
 
-// Lấy lịch sử mua hàng từ OrderItems (mới -> cũ)
+// Lấy lịch sử mua hàng user
 const getUserHistory = async (userId) => {
   const pool = await poolPromise;
 
@@ -38,7 +36,7 @@ const getUserHistory = async (userId) => {
       ORDER BY o.createdAt DESC
     `);
 
-  return (result.recordset || []).map(r => r.item_id);
+  return result.recordset.map(r => r.item_id);
 };
 
 module.exports = { getItemsWithText, getUserHistory };

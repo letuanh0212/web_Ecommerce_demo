@@ -105,5 +105,5 @@ export {
   createArticleApi,
   deleteArticleApi,
   getArticleDetailApi,
-  updateArticleApi
+  updateArticleApi,
 };

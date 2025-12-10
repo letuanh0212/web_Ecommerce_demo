@@ -1,6 +1,6 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
-import SellerHeader from "../../component/Header_seller.jsx";
+import SellerHeader from "../../component/header_seller.jsx";
 import NavbarSeller from "../../component/Navbar_seller.jsx";
 
 export default function SellerLayout() {
@@ -48,7 +48,3 @@ export default function SellerLayout() {
     </div>
   );
 }
-
-
-
-

@@ -14,6 +14,7 @@ export default function SellerHeader() {
     const storedUser =
       JSON.parse(localStorage.getItem("user")) ||
       JSON.parse(sessionStorage.getItem("user"));
+
     setUser(storedUser);
 
     if (storedUser?.role === "seller") {

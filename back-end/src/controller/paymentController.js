@@ -9,25 +9,31 @@ const createVnpayPayment = async (req, res) => {
         const tmnCode = process.env.VNP_TMNCODE;
         const secretKey = process.env.VNP_HASHSECRET;
         const returnUrl = process.env.VNP_RETURN_URL;
+        const vnpUrl = process.env.VNP_URL;
 
-        const vnpUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+        const createDate = moment().format("YYYYMMDDHHmmss");
+        const expireDate = moment().add(10, 'minutes').format("YYYYMMDDHHmmss");
 
-        const date = moment().format("YYYYMMDDHHmmss");
-        const ipAddr = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+        const ipAddr =
+            req.headers["x-forwarded-for"] ||
+            req.connection.remoteAddress ||
+            req.socket.remoteAddress;
 
-        let vnp_Params = {};
-        vnp_Params['vnp_Version'] = '2.1.0';
-        vnp_Params['vnp_Command'] = 'pay';
-        vnp_Params['vnp_TmnCode'] = tmnCode;
-        vnp_Params['vnp_Locale'] = 'vn';
-        vnp_Params['vnp_CurrCode'] = 'VND';
-        vnp_Params['vnp_TxnRef'] = orderId;
-        vnp_Params['vnp_OrderInfo'] = `Thanh toan don hang #${orderId}`;
-        vnp_Params['vnp_OrderType'] = 'other';
-        vnp_Params['vnp_Amount'] = amount * 100;
-        vnp_Params['vnp_ReturnUrl'] = returnUrl;
-        vnp_Params['vnp_IpAddr'] = ipAddr;
-        vnp_Params['vnp_CreateDate'] = date;
+        let vnp_Params = {
+            vnp_Version: '2.1.0',
+            vnp_Command: 'pay',
+            vnp_TmnCode: tmnCode,
+            vnp_Locale: 'vn',
+            vnp_CurrCode: 'VND',
+            vnp_TxnRef: orderId,
+            vnp_OrderInfo: `Thanh toan don hang #${orderId}`,
+            vnp_OrderType: 'other',
+            vnp_Amount: amount * 100,
+            vnp_ReturnUrl: returnUrl,
+            vnp_IpAddr: ipAddr,
+            vnp_CreateDate: createDate,
+            vnp_ExpireDate: expireDate
+        };
 
         vnp_Params = sortObject(vnp_Params);
 
@@ -36,7 +42,8 @@ const createVnpayPayment = async (req, res) => {
         const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
         vnp_Params['vnp_SecureHash'] = signed;
-        const paymentUrl = vnpUrl + '?' + querystring.stringify(vnp_Params, { encode: false });
+        const paymentUrl =
+            vnpUrl + '?' + querystring.stringify(vnp_Params, { encode: false });
 
         return res.json({ paymentUrl });
 
@@ -46,12 +53,14 @@ const createVnpayPayment = async (req, res) => {
     }
 };
 
+
 const vnpayReturn = async (req, res) => {
     try {
         let vnp_Params = req.query;
         const secretKey = process.env.VNP_HASHSECRET;
 
         const secureHash = vnp_Params['vnp_SecureHash'];
+
         delete vnp_Params['vnp_SecureHash'];
         delete vnp_Params['vnp_SecureHashType'];
 
@@ -77,6 +86,7 @@ const vnpayReturn = async (req, res) => {
     }
 };
 
+
 // Sắp xếp object đúng chuẩn VNPAY
 function sortObject(obj) {
     const sorted = {};
@@ -84,6 +94,7 @@ function sortObject(obj) {
     keys.forEach(k => sorted[k] = obj[k]);
     return sorted;
 }
+
 
 module.exports = {
     createVnpayPayment,

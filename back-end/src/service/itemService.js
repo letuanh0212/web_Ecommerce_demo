@@ -38,7 +38,7 @@ const checkItemOwnership = async (itemId, userId) => {
 // 1. Tạo sản phẩm mới
 const createItemService = async (data, userId) => {
     try {
-        const { store_id, name, description, price, stock, category_id } = data;
+        const { store_id, name, description, price, stock, category_id, image } = data;
 
         // Check quyền
         const isOwner = await checkStoreOwnership(store_id, userId);
@@ -58,7 +58,20 @@ const createItemService = async (data, userId) => {
                 VALUES (@store_id, @name, @description, @price, @stock, @category_id)
             `);
 
-        return result.recordset[0];
+        const newItem = result.recordset[0];
+
+        // Nếu có image, thêm vào ItemImages
+        if (image) {
+            await pool.request()
+                .input("item_id", sql.Int, newItem.id)
+                .input("image", sql.NVarChar, image)
+                .query(`
+                    INSERT INTO ItemImages (item_id, image)
+                    VALUES (@item_id, @image)
+                `);
+        }
+
+        return newItem;
     } catch (err) {
         throw new Error(err.message);
     }
@@ -74,7 +87,7 @@ const getItemsByStoreService = async (storeId) => {
                 SELECT 
                     I.*,
                     S.name as store_name,
-                    (SELECT TOP 1 image FROM ItemVariants WHERE item_id = I.id) AS image,
+                    (SELECT TOP 1 image FROM ItemImages WHERE item_id = I.id) AS image,
                     (
                         SELECT * FROM ItemVariants V
                         WHERE V.item_id = I.id
@@ -95,7 +108,7 @@ const getItemsByStoreService = async (storeId) => {
     }
 };
 
-// 3. Lấy chi tiết Item (kèm Variants)
+// 3. Lấy chi tiết Item (kèm Variants và Images)
 const getItemDetailService = async (itemId) => {
     try {
         const pool = await poolPromise;
@@ -112,7 +125,14 @@ const getItemDetailService = async (itemId) => {
             .input("item_id", sql.Int, itemId)
             .query("SELECT * FROM ItemVariants WHERE item_id = @item_id");
 
+        const imageRes = await pool.request()
+            .input("item_id", sql.Int, itemId)
+            .query("SELECT image FROM ItemImages WHERE item_id = @item_id");
+
         item.variants = variantRes.recordset;
+        item.images = imageRes.recordset.map(r => r.image);
+        item.image = imageRes.recordset.length > 0 ? imageRes.recordset[0].image : null;
+        
         return item;
     } catch (err) {
         throw new Error(err.message);
@@ -125,7 +145,7 @@ const updateItemService = async (id, data, userId) => {
         const isOwner = await checkItemOwnership(id, userId);
         if (!isOwner) throw new Error("Forbidden: Bạn không có quyền sửa sản phẩm này!");
 
-        const { name, description, price, stock, category_id } = data;
+        const { name, description, price, stock, category_id, image } = data;
 
         const pool = await poolPromise;
         await pool.request()
@@ -141,6 +161,23 @@ const updateItemService = async (id, data, userId) => {
                     stock = @stock, category_id = @category_id, updatedAt = GETDATE()
                 WHERE id = @id
             `);
+
+        // Nếu có image, update hoặc insert vào ItemImages
+        if (image) {
+            // Xoá ảnh cũ
+            await pool.request()
+                .input("item_id", sql.Int, id)
+                .query("DELETE FROM ItemImages WHERE item_id = @item_id");
+
+            // Thêm ảnh mới
+            await pool.request()
+                .input("item_id", sql.Int, id)
+                .input("image", sql.NVarChar, image)
+                .query(`
+                    INSERT INTO ItemImages (item_id, image)
+                    VALUES (@item_id, @image)
+                `);
+        }
 
         return true;
     } catch (err) {
@@ -280,7 +317,7 @@ const getAllItemsService = async () => {
         const result = await pool.request().query(`
             SELECT 
                 I.*,
-                (SELECT TOP 1 image FROM ItemVariants WHERE item_id = I.id) as image,
+                (SELECT TOP 1 image FROM ItemImages WHERE item_id = I.id) as image,
                 S.name as store_name,
                 (
                     SELECT * FROM ItemVariants V

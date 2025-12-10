@@ -1,71 +1,66 @@
+// src/model/recommender_Models.js
 const natural = require("natural");
 const TfIdf = natural.TfIdf;
+
+function cosineSimilarityFromVectors(vecA, vecB) {
+  let dot = 0, na = 0, nb = 0;
+  const keys = new Set([...Object.keys(vecA), ...Object.keys(vecB)]);
+  for (const k of keys) {
+    const a = vecA[k] || 0;
+    const b = vecB[k] || 0;
+    dot += a * b;
+    na += a * a;
+    nb += b * b;
+  }
+  return dot / (Math.sqrt(na) * Math.sqrt(nb) || 1);
+}
+
 function recommendTFIDF(items, userHistory, topN = 10) {
+  if (!Array.isArray(items) || items.length === 0) return [];
 
-    // Trường hợp user chưa mua gì
-    if (userHistory.length === 0) {
-        console.log("User chưa mua -> trả về top N item mới nhất");
+  // Cold-start fallback
+  if (!userHistory || userHistory.length === 0) {
+    return items.slice(0, topN).map(i => ({ id: i.id, name: i.name, score: 0 }));
+  }
 
-        return items
-            .slice(0, topN)   // vì đã ORDER BY id DESC trong SQL
-            .map(i => ({
-                id: i.id,
-                name: i.name,
-                score: 0
-            }));
-    }
+  const tfidf = new TfIdf();
 
-    const tfidf = new TfIdf();
+  // add combined text docs
+  items.forEach(item => tfidf.addDocument(item.text || ""));
 
-    // Thêm document để TF-IDF xử lý
-    items.forEach(item => tfidf.addDocument(item.text));
-
-    // Vector TF-IDF của user
-    let userVector = {};
-
-    userHistory.forEach(itemId => {
-        const idx = items.findIndex(x => x.id === itemId);
-        if (idx === -1) return;
-
-        tfidf.listTerms(idx).forEach(term => {
-            if (!userVector[term.term]) userVector[term.term] = 0;
-            userVector[term.term] += term.tfidf;
-        });
+  // build user vector as average tfidf of purchased docs
+  const userVector = {};
+  let count = 0;
+  userHistory.forEach(pid => {
+    const idx = items.findIndex(it => it.id === pid);
+    if (idx === -1) return;
+    count++;
+    tfidf.listTerms(idx).forEach(t => {
+      userVector[t.term] = (userVector[t.term] || 0) + t.tfidf;
     });
+  });
 
-    // Normalize
-    const keys = Object.keys(userVector);
-    keys.forEach(k => userVector[k] /= userHistory.length);
+  if (count === 0) {
+    // userHistory doesn't match current items -> fallback
+    return items.slice(0, topN).map(i => ({ id: i.id, name: i.name, score: 0 }));
+  }
 
-    // Tính similarity
-    const recommended = items
-        .filter(i => !userHistory.includes(i.id))
-        .map(i => {
-            const index = items.findIndex(it => it.id === i.id);
+  Object.keys(userVector).forEach(k => userVector[k] /= count);
 
-            let docVector = {};
-            tfidf.listTerms(index).forEach(t => {
-                docVector[t.term] = t.tfidf;
-            });
+  // compute scores
+  const scores = items
+    .filter(i => !userHistory.includes(i.id))
+    .map(i => {
+      const idx = items.findIndex(it => it.id === i.id);
+      const docVec = {};
+      tfidf.listTerms(idx).forEach(t => docVec[t.term] = t.tfidf);
+      const score = cosineSimilarityFromVectors(userVector, docVec);
+      return { id: i.id, name: i.name, score };
+    })
+    .sort((a,b) => b.score - a.score)
+    .slice(0, topN);
 
-            let dot = 0, normA = 0, normB = 0;
-
-            keys.forEach(term => {
-                const a = userVector[term] || 0;
-                const b = docVector[term] || 0;
-                dot += a * b;
-                normA += a * a;
-                normB += b * b;
-            });
-
-            const score = dot / (Math.sqrt(normA) * Math.sqrt(normB) || 1);
-
-            return { id: i.id, name: i.name, score };
-        })
-        .sort((a, b) => b.score - a.score)
-        .slice(0, topN);
-
-    return recommended;
+  return scores;
 }
 
 module.exports = { recommendTFIDF };

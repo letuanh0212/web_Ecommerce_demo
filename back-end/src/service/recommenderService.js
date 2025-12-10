@@ -1,62 +1,44 @@
+// src/service/recommenderService.js
 const { poolPromise } = require("../config/Sql");
-const { analyzeTextES } = require("./elasticAnalyze");
 
-// LẤY ITEM + TẠO TEXT TF-IDF
+// Lấy items + build text (KHÔNG gọi ES analyze ở runtime)
 const getItemsWithText = async () => {
-    const pool = await poolPromise;
+  const pool = await poolPromise;
 
-    // Query lấy items từ SQL
-    const result = await pool.request().query(`
-        SELECT 
-            i.id, 
-            i.name, 
-            i.description, 
-            c.name AS category_name
-        FROM Items i
-        LEFT JOIN Categories c ON i.category_id = c.id
-        ORDER BY i.id DESC
-    `);
+  const result = await pool.request().query(`
+    SELECT 
+      i.id, i.name, COALESCE(i.description,'') AS description, 
+      c.name AS category_name, i.createdAt
+    FROM Items i
+    LEFT JOIN Categories c ON i.category_id = c.id
+    ORDER BY i.createdAt DESC
+  `);
 
-    const items = result.recordset;   // <<--- BẠN BỊ MẤT DÒNG NÀY
+  const items = result.recordset || [];
 
-    // Phân tích text bằng Elasticsearch, CHẠY TUẦN TỰ để tránh lỗi 429
-    const itemsWithKeywords = [];
-
-    for (const item of items) {
-        const combined = `${item.name} ${item.description} ${item.category_name}`;
-        const keywords = await analyzeTextES(combined);
-
-        itemsWithKeywords.push({
-            id: item.id,
-            name: item.name,
-            text: keywords
-        });
-
-        // Nghỉ 50ms để Elasticsearch không quá tải
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    return itemsWithKeywords;
+  // Tạo text gộp sẵn (dùng khi build TF-IDF)
+  return items.map(it => ({
+    id: it.id,
+    name: it.name,
+    text: `${it.name || ''} ${it.description || ''} ${it.category_name || ''}`.trim()
+  }));
 };
 
-
-// LẤY LỊCH SỬ USER ĐÃ XEM / MUA
+// Lấy lịch sử mua hàng từ OrderItems (mới -> cũ)
 const getUserHistory = async (userId) => {
-    const pool = await poolPromise;
+  const pool = await poolPromise;
 
-    const result = await pool.request().query(`
-        SELECT oi.item_id
-        FROM OrderItems oi
-        INNER JOIN Orders o ON oi.order_id = o.id
-        WHERE o.user_id = ${userId}
-        ORDER BY o.createdAt DESC
+  const result = await pool.request()
+    .input("userId", userId)
+    .query(`
+      SELECT oi.item_id
+      FROM OrderItems oi
+      INNER JOIN Orders o ON oi.order_id = o.id
+      WHERE o.user_id = @userId
+      ORDER BY o.createdAt DESC
     `);
 
-    // Trả về mảng [item_id, item_id, ...]
-    return result.recordset.map(r => r.item_id);
+  return (result.recordset || []).map(r => r.item_id);
 };
 
-module.exports = { 
-    getItemsWithText,
-    getUserHistory
-};
+module.exports = { getItemsWithText, getUserHistory };

@@ -7,7 +7,7 @@ const { checkStore, checkStoreController } = require("../controller/sellerContro
 const { searchItems } = require("../controller/elasticSearchController");
 const { recommendForUser } = require("../controller/recommenderController");
 //const {sendSellerRegisterEmail,sendOrderPaymentEmail } = require("../controller/emailController");
-const {createVnpayPayment,vnpayReturn}  = require("../controller/vnpayController")
+const {createVnpayOrderService,vnpayReturn}  = require("../controller/vnpayController")
 
 
 routerAPI.get("/", async (req, res) => {
@@ -118,7 +118,8 @@ routerAPI.get("/user/:userId", async (req, res) => {
 // routerAPI.get("/register/email", sendSellerRegisterEmail);
 // routerAPI.get("/payment/email", sendOrderPaymentEmail);
 
-routerAPI.post("/vnpay/create", createVnpayPayment);
+// VNPAY endpoints (mounted under /api)
+routerAPI.post("/vnpay/create", verifyToken, createVnpayOrderService);
 routerAPI.get("/vnpay/return", vnpayReturn);
 
 

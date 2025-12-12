@@ -8,6 +8,7 @@ router.post("/", verifyToken, orderController.createOrder); // Phải đăng nh�
 router.get("/user/history", verifyToken, orderController.getOrdersByUser); // Lấy lịch sử của chính mình
 router.post("/:id/cancel", verifyToken, orderController.cancelOrder);
 router.get("/:id", verifyToken, orderController.getOrderDetail);
+router.post("/order/cod", verifyToken ,orderController.createOrder)
 
 // Admin/Seller routes
 router.put("/:id/status", verifyToken, checkRole(['admin', 'seller']), orderController.updateOrderStatus);

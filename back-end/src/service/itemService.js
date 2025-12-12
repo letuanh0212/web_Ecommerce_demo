@@ -49,7 +49,7 @@ const createItemService = async (data, userId) => {
             .input("store_id", sql.Int, store_id)
             .input("name", sql.NVarChar, name)
             .input("description", sql.NVarChar, description)
-            .input("price", sql.Decimal(18, 2), price)
+            .input("price", sql.Decimal(18), price)
             .input("stock", sql.Int, stock || 0)
             .input("category_id", sql.Int, category_id || null)
             .query(`

@@ -1,90 +1,88 @@
 const nodemailer = require("nodemailer");
-require("dotenv").config();
+
+const emailUser = process.env.EMAIL_USERNAME || process.env.EMAIL_USER || process.env.EMAIL;
+const emailPass = process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
+
+if (!emailUser || !emailPass) {
+    console.warn('[emailService] email credentials not set in environment. Emails will not be sent.');
+}
 
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-        user: process.env.EMAIL_USERNAME,
-        pass: process.env.EMAIL_PASSWORD,
+        user: emailUser,
+        pass: emailPass,
     },
 });
 
-// Email xác nhận đăng ký seller
-const sendSellerRegisterEmail = async (email, sellerName) => {
-    const mailOptions = {
-        from: process.env.EMAIL_USERNAME,
-        to: email,
-        subject: "Xác nhận đăng ký cửa hàng",
-        html: `
-            <h2>Xin chào ${sellerName},</h2>
-            <p>Cảm ơn bạn đã đăng ký trở thành cửa hàng bán hàng.</p>
-            <p>Thông tin của bạn đã được gửi tới quản trị viên để xét duyệt.</p>
-            <p>Bạn sẽ nhận được email khi tài khoản được duyệt.</p>
-        `
-    };
+const sendOrderPaymentEmail = async (
+    to,
+    orderId,
+    total,
+    items,
+    shipping_name,
+    shipping_phone,
+    shipping_address,
+    note
+) => {
 
-    await transporter.sendMail(mailOptions);
-};
-const sendOrderPaymentEmail = async (email, orderCode, totalAmount, items) => {
-    const total = Number(totalAmount) || 0;
+    console.log('[emailService] sendOrderPaymentEmail called', { to, orderId, itemsCount: items?.length, shipping_name, shipping_phone });
 
-    const itemsHTML = Array.isArray(items) && items.length > 0
-      ? items.map(item => {
-          const price = Number(item?.price) || 0;
-          const quantity = Number(item?.quantity) || 1;
-          const name = item?.name || "N/A";
-          return `
-            <tr>
-              <td style="padding:8px; border:1px solid #ddd;">${name}</td>
-              <td style="padding:8px; border:1px solid #ddd; text-align:center;">${quantity}</td>
-              <td style="padding:8px; border:1px solid #ddd; text-align:right;">${price.toLocaleString()}₫</td>
-              <td style="padding:8px; border:1px solid #ddd; text-align:right;">${(price * quantity).toLocaleString()}₫</td>
-            </tr>
-          `;
-        }).join("")
-      : `
+    if (!emailUser || !emailPass) {
+        console.warn('[emailService] skipping sendMail because credentials are missing');
+        return; // don't attempt to send
+    }
+
+    const itemListHTML = items
+        .map(
+            (item) => `
         <tr>
-          <td colspan="4" style="padding:8px; text-align:center;">Không có sản phẩm</td>
+            <td>${item.name}</td>
+            <td>${item.quantity}</td>
+            <td>${item.price.toLocaleString()}₫</td>
+            <td>${(item.price * item.quantity).toLocaleString()}₫</td>
         </tr>
-      `;
+    `
+        )
+        .join("");
 
-    const mailOptions = {
-        from: process.env.EMAIL_USERNAME,
-        to: email,
-        subject: `Xác nhận thanh toán đơn hàng #${orderCode}`,
-        html: `
-        <div style="font-family:Arial,sans-serif; color:#333; line-height:1.6; max-width:600px; margin:auto; padding:20px; border:1px solid #eee; border-radius:10px; background:#f9f9f9;">
-          <h2 style="color:#4CAF50;">🎉 Cảm ơn bạn đã mua hàng!</h2>
-          <p>Đơn hàng <strong>#${orderCode}</strong> của bạn đã được thanh toán thành công.</p>
-          
-          <h3 style="border-bottom:1px solid #ddd; padding-bottom:5px;">Chi tiết sản phẩm</h3>
-          <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-            <thead>
-              <tr>
-                <th style="padding:8px; border:1px solid #ddd; background:#f2f2f2;">Sản phẩm</th>
-                <th style="padding:8px; border:1px solid #ddd; background:#f2f2f2;">SL</th>
-                <th style="padding:8px; border:1px solid #ddd; background:#f2f2f2;">Đơn giá</th>
-                <th style="padding:8px; border:1px solid #ddd; background:#f2f2f2;">Thành tiền</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${itemsHTML}
-            </tbody>
-          </table>
+    const html = `
+        <h2>Đơn hàng #${orderId} đặt thành công!</h2>
 
-          <h3 style="text-align:right; margin-top:15px;">Tổng: <span style="color:#e91e63;">${total.toLocaleString()}₫</span></h3>
+        <h3>Thông tin giao hàng:</h3>
+        <p><b>Người nhận:</b> ${shipping_name}</p>
+        <p><b>Số điện thoại:</b> ${shipping_phone}</p>
+        <p><b>Địa chỉ:</b> ${shipping_address}</p>
+        <p><b>Ghi chú:</b> ${note || "Không có"}</p>
 
-          <p style="margin-top:30px;">Bạn có thể xem lịch sử đơn hàng trong tài khoản của mình.</p>
-          <p>Chúc bạn một ngày tốt lành!<br/><strong>Shop của bạn</strong></p>
-        </div>
-        `
-    };
+        <h3>Sản phẩm:</h3>
+        <table border="1" cellspacing="0" cellpadding="8">
+            <tr>
+                <th>Sản phẩm</th>
+                <th>SL</th>
+                <th>Giá</th>
+                <th>Tạm tính</th>
+            </tr>
+            ${itemListHTML}
+        </table>
 
-    await transporter.sendMail(mailOptions);
+        <h3>Tổng tiền: ${total.toLocaleString()}₫</h3>
+
+        <p>Cảm ơn bạn đã mua hàng!</p>
+    `;
+
+    try {
+        await transporter.sendMail({
+            from: emailUser,
+            to,
+            subject: `Xác nhận đơn hàng #${orderId}`,
+            html,
+        });
+        console.log('[emailService] email sent to', to);
+    } catch (err) {
+        console.error('[emailService] sendMail error', err);
+        throw err;
+    }
 };
 
-
-module.exports = {
-    sendSellerRegisterEmail,
-    sendOrderPaymentEmail
-};
+module.exports = {sendOrderPaymentEmail}

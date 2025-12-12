@@ -1,148 +1,152 @@
 const orderService = require("../service/orderService");
 const { sendOrderPaymentEmail } = require("../service/emailService");
 
-// ---------------- CREATE ORDER + SEND EMAIL ----------------
-// const createOrder = async (req, res) => {
-//     try {
-//         const userId = req.user.id;
-//         const { items ,email} = req.body;
-
-//         if (!items || items.length === 0)
-//             return res.status(400).json({ error: "Giỏ hàng trống" });
-
-//         // Tạo đơn hàng trong service
-//         const result = await orderService.createOrderService(userId, items);
-//         console.log("check result>>>>>>>>>", result);
-
-//         // ---------------- GỬI EMAIL XÁC NHẬN ----------------
-//         if (result?.email) {
-//             await sendOrderPaymentEmail(
-//                 result.email,
-//                 result.orderCode,
-//                 result.totalAmount,
-//                 result.items
-//             );
-//         } else {
-//             console.warn("⚠ Không có email để gửi!");
-//         }
-
-//         res.json({
-//             message: "Đặt hàng thành công!",
-//             ...result
-//         });
-
-//     } catch (err) {
-//         console.error("Create Order Error:", err);
-//         res.status(500).json({ error: err.message });
-//     }
-// };
-// ---------------- CREATE ORDER + SEND EMAIL ----------------
+// Tạo đơn hàng COD
 const createOrder = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { items, email } = req.body;  // Lấy email từ FE
+  try {
+    const userId = req.user?.id || null;
 
-        if (!items || items.length === 0)
-            return res.status(400).json({ error: "Giỏ hàng trống" });
+    const {
+      items,
+      shipping_name,
+      shipping_phone,
+      shipping_address,
+      note,
+      paymentMethod,
+    } = req.body;
 
-        // Tạo đơn hàng trong service
-        const result = await orderService.createOrderService(userId, items);
-        console.log("check result>>>>>>>>>", result);
+    const email = req.user?.email || req.body?.email || null;
 
-        // Gắn thêm thông tin email, orderCode, totalAmount, items để gửi email
-        result.email = email;                   // email từ FE
-        result.orderCode = result.order_id;     // orderCode dùng để hiển thị
-        result.totalAmount = result.total;      // tổng tiền
-        result.items = items;                   // danh sách sản phẩm
-    
-        // ---------------- GỬI EMAIL XÁC NHẬN ----------------
-        if (result?.email) {
-            await sendOrderPaymentEmail(
-                result.email,
-                result.orderCode,
-                result.totalAmount,
-                result.items
-            );
-        } else {
-            console.warn(" Không có email để gửi!");
-        }
+    console.log("[orderController] createOrder called", { userId, itemsCount: items?.length, paymentMethod });
 
-        res.json({
-            message: "Đặt hàng thành công! Email xác nhận đã gửi.",
-            ...result
-        });
-
-    } catch (err) {
-        console.error("Create Order Error:", err);
-        res.status(500).json({ error: err.message });
+    if (!items || items.length === 0) {
+      console.log("[orderController] empty cart");
+      return res.status(400).json({ error: "Giỏ hàng trống" });
     }
+
+    // Tạo đơn (dùng service tạo COD - service đã xử lý transaction và giảm stock)
+    console.log("[orderController] creating order via service for user", userId);
+    const orderRes = await orderService.createCODOrderService(userId, {
+      items,
+      shipping_name,
+      shipping_phone,
+      shipping_address,
+      note,
+    });
+
+    const orderId = orderRes.orderId;
+    console.log("[orderController] order created", { orderId, total: orderRes.totalAmount });
+
+    // Lấy chi tiết order để lấy tên sản phẩm cho email
+    const orderDetail = await orderService.getOrderDetailService(orderId, userId);
+
+    // Gửi email xác nhận nếu có email
+    if (email) {
+      console.log(`[orderController] sending confirmation email to ${email} for order ${orderId}`);
+      try {
+        await sendOrderPaymentEmail(
+          email,
+          orderId,
+          orderRes.totalAmount || orderRes.finalAmount || 0,
+          // map items to shape emailService expects (name, quantity, price)
+          (orderDetail.items || []).map(i => ({ name: i.item_name || i.name || '', quantity: i.quantity, price: i.price })),
+          shipping_name,
+          shipping_phone,
+          shipping_address,
+          note
+        );
+        console.log('[orderController] confirmation email sent');
+      } catch (mailErr) {
+        console.error("[orderController] Send email failed:", mailErr);
+      }
+    } else {
+      console.log('[orderController] no email available to send confirmation');
+    }
+
+    return res.json({ success: true, order_id: orderId, total: orderRes.totalAmount || orderRes.finalAmount || 0 });
+
+  } catch (err) {
+    console.error("COD Order Error:", err);
+    return res.status(500).json({ error: err.message });
+  }
 };
 
 
 // ---------------- GET ORDERS BY USER ----------------
 const getOrdersByUser = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const orders = await orderService.getOrdersByUserService(userId);
-        res.json(orders);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const userId = req.user.id;
+    const orders = await orderService.getOrdersByUserService(userId);
+    res.json(orders);
+  } catch (err) {
+    console.error("Get Orders By User Error:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // ---------------- GET ORDER DETAIL ----------------
 const getOrderDetail = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const order = await orderService.getOrderDetailService(req.params.id, userId);
+  try {
+    const userId = req.user.id;
+    const orderId = parseInt(req.params.id, 10);
+    const order = await orderService.getOrderDetailService(orderId, userId);
 
-        if (!order) {
-            return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-        }
-
-        res.json(order);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
+
+    res.json(order);
+  } catch (err) {
+    console.error("Get Order Detail Error:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
-// ---------------- UPDATE STATUS ----------------
+// ---------------- UPDATE ORDER STATUS ----------------
 const updateOrderStatus = async (req, res) => {
-    try {
-        await orderService.updateOrderStatusService(req.params.id, req.body.status);
-        res.json({ message: "Cập nhật trạng thái thành công" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const orderId = parseInt(req.params.id, 10);
+    const { status } = req.body;
+
+    if (!status) return res.status(400).json({ error: "Missing status" });
+
+    await orderService.updateOrderStatusService(orderId, status);
+    res.json({ message: "Cập nhật trạng thái thành công" });
+  } catch (err) {
+    console.error("Update Order Status Error:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // ---------------- CANCEL ORDER ----------------
 const cancelOrder = async (req, res) => {
-    try {
-        await orderService.cancelOrderService(req.params.id);
-        res.json({ message: "Đã hủy đơn hàng và hoàn tiền kho" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const orderId = parseInt(req.params.id, 10);
+    await orderService.cancelOrderService(orderId);
+    res.json({ message: "Đã hủy đơn hàng và hoàn tiền kho" });
+  } catch (err) {
+    console.error("Cancel Order Error:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
-// ---------------- SELLER: GET ORDERS BY STORE ----------------
+// ---------------- GET ORDERS BY STORE ----------------
 const getOrdersByStore = async (req, res) => {
-    try {
-        const { storeId } = req.params;
-        const orders = await orderService.getOrdersByStoreService(storeId);
-        res.json(orders);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const storeId = parseInt(req.params.storeId, 10);
+    const orders = await orderService.getOrdersByStoreService(storeId);
+    res.json(orders);
+  } catch (err) {
+    console.error("Get Orders By Store Error:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
-// ---------------- EXPORT ----------------
 module.exports = {
-    createOrder,
-    getOrdersByUser,
-    getOrderDetail,
-    updateOrderStatus,
-    cancelOrder,
-    getOrdersByStore
+  createOrder,
+  getOrdersByUser,
+  getOrderDetail,
+  updateOrderStatus,
+  cancelOrder,
+  getOrdersByStore,
 };

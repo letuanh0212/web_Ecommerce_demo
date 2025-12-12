@@ -23,8 +23,6 @@ const START_SERVER = async () => {
 
     app.listen(PORT, HOST, async () => {
         console.log(`\n3. Server is running at http://${HOST}:${PORT}`);
-
-
     });
 }
 

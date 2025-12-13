@@ -1,17 +1,15 @@
 const orderService = require("../service/orderService");
 const { sendOrderPaymentEmail } = require("../service/emailService");
 const { poolPromise, sql } = require("../config/Sql");
-const qs = require("qs");
-const crypto = require("crypto");
-const moment = require("moment");
+const { VNPay } = require("vnpay");
 
-// Hàm sort đúng chuẩn
-function sortObject(obj) {
-    let sorted = {};
-    let keys = Object.keys(obj).sort();
-    keys.forEach(key => sorted[key] = obj[key]);
-    return sorted;
-}
+const vnpay = new VNPay({
+    tmnCode: process.env.VNP_TMNCODE,
+    secureSecret: process.env.VNP_HASHSECRET,
+    vnpayHost: 'https://sandbox.vnpayment.vn',
+    testMode: true,
+    hashAlgorithm: 'SHA512',
+});
 
 // ---------- CREATE PAYMENT URL (CHUẨN VNPAY) ----------
 const createVnpayOrderService = async (req, res) => {
@@ -35,38 +33,20 @@ const createVnpayOrderService = async (req, res) => {
         const amount = order.totalAmount; // VND
 
         // 2. CHỈ NHÂN 100 TẠI ĐÂY
-        const vnpAmount = amount * 100;
+        const vnpAmount = amount;
 
-        const createDate = moment().format("YYYYMMDDHHmmss");
-        const expireDate = moment().add(15, "minutes").format("YYYYMMDDHHmmss");
+        let ipAddr = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : req.socket.remoteAddress;
+        if (ipAddr === '::1' || ipAddr === '::ffff:127.0.0.1' || ipAddr.startsWith('::ffff:')) {
+            ipAddr = '127.0.0.1';
+        }
 
-        const params = {
-            vnp_Version: "2.1.0",
-            vnp_Command: "pay",
-            vnp_TmnCode: process.env.VNP_TMNCODE,
-            vnp_Amount: vnpAmount.toString(),
-            vnp_CurrCode: "VND",
+        const paymentUrl = vnpay.buildPaymentUrl({
+            vnp_Amount: vnpAmount,
+            vnp_IpAddr: ipAddr,
+            vnp_ReturnUrl: process.env.VNP_RETURN_URL,
             vnp_TxnRef: orderId.toString(),
             vnp_OrderInfo: `Thanh toán đơn hàng #${orderId}`,
-            vnp_OrderType: "other",
-            vnp_Locale: "vn",
-            vnp_ReturnUrl: process.env.VNP_RETURN_URL,
-            vnp_IpAddr: req.headers["x-forwarded-for"] || req.socket.remoteAddress,
-            vnp_CreateDate: createDate,
-            vnp_ExpireDate: expireDate,
-        };
-
-        // Sort
-        const sorted = sortObject(params);
-        const signData = qs.stringify(sorted, { encode: false });
-
-        // Hash SHA512
-        const hmac = crypto.createHmac("sha512", process.env.VNP_HASHSECRET);
-        const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-
-        sorted.vnp_SecureHash = signed;
-
-        const paymentUrl = `${process.env.VNP_URL}?${qs.stringify(sorted, { encode: false })}`;
+        });
 
         console.log("[vnpayController] created order and paymentUrl", {
             orderId,
@@ -78,7 +58,8 @@ const createVnpayOrderService = async (req, res) => {
         return res.json({
             success: true,
             orderId,
-            paymentUrl
+            paymentUrl,
+            vnpAmount
         });
 
     } catch (err) {
@@ -92,6 +73,13 @@ const vnpayReturn = async (req, res) => {
     try {
         console.log('[vnpayController] return called', req.query);
 
+        const verify = vnpay.verifyReturnUrl(req.query);
+
+        if (!verify.isSuccess) {
+            console.error('[vnpayController] Payment verification failed:', verify.message);
+            return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+        }
+
         const pool = await poolPromise;
 
         const orderId = req.query.vnp_TxnRef;
@@ -101,7 +89,47 @@ const vnpayReturn = async (req, res) => {
             .input("id", sql.Int, orderId)
             .query(`UPDATE Orders SET status='paid', updatedAt=GETDATE() WHERE id=@id`);
 
-        return res.redirect(`${process.env.FRONTEND_URL}/payment-success?orderId=${orderId}`);
+        // Get order details for email
+        const orderResult = await pool.request()
+            .input("id", sql.Int, orderId)
+            .query(`
+                SELECT o.*, u.email
+                FROM Orders o
+                JOIN Users u ON o.user_id = u.id
+                WHERE o.id = @id
+            `);
+
+        if (orderResult.recordset.length > 0) {
+            const order = orderResult.recordset[0];
+
+            // Get order items
+            const itemsResult = await pool.request()
+                .input("order_id", sql.Int, orderId)
+                .query(`
+                    SELECT oi.quantity, oi.price, i.name
+                    FROM OrderItems oi
+                    JOIN Items i ON oi.item_id = i.id
+                    WHERE oi.order_id = @order_id
+                `);
+
+            // Send email
+            await sendOrderPaymentEmail(
+                order.email,
+                orderId,
+                order.total_amount,
+                itemsResult.recordset.map(item => ({
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price
+                })),
+                order.shipping_name,
+                order.shipping_phone,
+                order.shipping_address,
+                order.note
+            );
+        }
+
+        return res.redirect(`${process.env.FRONTEND_URL}/`);
     } catch (err) {
         console.error(err);
         return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);

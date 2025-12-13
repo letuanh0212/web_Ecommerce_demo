@@ -139,8 +139,8 @@ const confirmCheckout = async () => {
         const resp = await createVnPayApi(payload);
         console.log('[CartPage] VNPAY create response', resp);
         if (resp && resp.success && resp.paymentUrl) {
-          // open payment gateway in new tab to avoid opener-related script issues
-          window.open(resp.paymentUrl, '_blank', 'noopener,noreferrer');
+          // redirect to payment gateway
+          window.location.href = resp.paymentUrl;
         } else {
           message.error(resp?.message || "Tạo đơn VNPAY thất bại.");
         }

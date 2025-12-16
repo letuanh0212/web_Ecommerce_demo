@@ -21,3 +21,14 @@ export const createVnPayApi = (payload) => {
 export const checkVnPayStatusApi = (orderId) => {
     return instance.get(`/api/vnpay/status/${orderId}`);
 };
+
+/**
+ * Áp dụng voucher
+ * @param {string} code
+ * @param {number} storeId
+ * @param {number} orderId
+ * @returns {Promise<any>}
+ */
+export const applyVoucherApi = (code, storeId, orderId) => {
+    return instance.post("/api/vouchers/apply", { code, storeId, orderId });
+};

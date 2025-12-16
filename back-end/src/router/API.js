@@ -122,6 +122,43 @@ routerAPI.get("/user/:userId", async (req, res) => {
 routerAPI.post("/vnpay/create", verifyToken, createVnpayOrderService);
 routerAPI.get("/vnpay/return", vnpayReturn);
 
+// VOUCHER endpoints
+const {
+    createVoucherController,
+    getVouchersByStoreController,
+    getVoucherByCodeController,
+    updateVoucherController,
+    deleteVoucherController,
+    applyVoucherController
+} = require("../controller/vouhcerController");
+
+routerAPI.post("/vouchers", verifyToken, checkRole(['seller']), createVoucherController);
+routerAPI.get("/vouchers/store/:storeId", verifyToken, getVouchersByStoreController);
+routerAPI.get("/vouchers/code/:code", verifyToken, getVoucherByCodeController);
+routerAPI.put("/vouchers/:id", verifyToken, checkRole(['seller']), updateVoucherController);
+routerAPI.delete("/vouchers/:id", verifyToken, checkRole(['seller']), deleteVoucherController);
+routerAPI.post("/vouchers/apply", verifyToken, applyVoucherController);
+
+// Additional routes for user and admin
+routerAPI.get("/vouchers/user", verifyToken, checkRole(['user']), async (req, res) => {
+  try {
+    // Giả sử lấy tất cả voucher active
+    const vouchers = await require("../service/voucherService").getAllVouchers();
+    res.json({ vouchers: vouchers.filter(v => v.is_active && new Date(v.end_date) > new Date()) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+routerAPI.get("/vouchers/admin", verifyToken, checkRole(['admin']), async (req, res) => {
+  try {
+    const vouchers = await require("../service/voucherService").getAllVouchers();
+    res.json({ vouchers });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 
 

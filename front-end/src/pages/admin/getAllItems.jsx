@@ -135,7 +135,7 @@ const GetAllItems = () => {
 
     return (
         <Card 
-            title={<Title level={4} style={{margin: 0}}>Quản Lý Sản Phẩm Toàn Cầu</Title>} 
+            title={<Title level={4} style={{margin: 0}}>Quản Lý Sản Phẩm</Title>} 
             extra={
                 <Space>
                     <Input 

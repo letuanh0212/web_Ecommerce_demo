@@ -1,6 +1,20 @@
 const natural = require("natural");
 const TfIdf = natural.TfIdf;
 
+// Stop words cho tiếng Việt
+const vietnameseStopWords = new Set([
+  'và', 'hoặc', 'nhưng', 'vì', 'vậy', 'thì', 'là', 'có', 'không', 'được', 'rất', 'của', 'cho', 'từ', 'trong', 'với', 'đến', 'tại', 'bởi', 'về', 'như', 'để', 'sẽ', 'đã', 'còn', 'mà', 'nếu', 'khi', 'thì', 'lại', 'hay', 'cũng', 'đều', 'đây', 'đó', 'kia', 'này', 'ấy', 'tôi', 'bạn', 'anh', 'chị', 'em', 'ông', 'bà', 'chúng', 'ta', 'mình', 'họ'
+]);
+
+function preprocessText(text) {
+  // Chuyển về lowercase, loại bỏ ký tự đặc biệt, tách từ
+  return text.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 1 && !vietnameseStopWords.has(word))
+    .join(' ');
+}
+
 function cosineSimilarityFromVectors(vecA, vecB) {
   let dot = 0, na = 0, nb = 0;
   const keys = new Set([...Object.keys(vecA), ...Object.keys(vecB)]);
@@ -22,7 +36,10 @@ function recommendTFIDF(items, userHistory, topN = 10) {
   }
 
   const tfidf = new TfIdf();
-  items.forEach(item => tfidf.addDocument(item.text));
+  items.forEach(item => {
+    const processedText = preprocessText(item.text);
+    tfidf.addDocument(processedText);
+  });
 
   const userVector = {};
   let count = 0;

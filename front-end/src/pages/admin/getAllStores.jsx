@@ -10,6 +10,7 @@ import {
   CloseCircleOutlined
 } from "@ant-design/icons";
 import api from "../../unti/axios.cusomize";
+import adminApi from "../../unti/api_admin";
 import { useNavigate } from "react-router-dom";
 
 const { Title } = Typography;
@@ -277,6 +278,33 @@ const GetAllStores = () => {
               />
             </Popconfirm>
           )}
+
+          {/* Nút xóa (admin) */}
+          <Popconfirm
+            title={`Xóa cửa hàng và tất cả dữ liệu liên quan?`}
+            description={`Hành động này sẽ xóa Store ${record.name} và các sản phẩm/variant/OrderItems liên quan.`}
+            onConfirm={async () => {
+              const prev = stores.slice();
+              try {
+                // Optimistic UI: remove
+                setStores(prev.filter(s => s.id !== record.id));
+                await adminApi.deleteStore(record.id);
+                message.success('Xóa cửa hàng thành công');
+              } catch (err) {
+                setStores(prev);
+                if (err && err.response && err.response.status === 401) {
+                  notification.error({ message: 'Phiên hết hạn', description: 'Vui lòng đăng nhập lại' });
+                  navigate('/login');
+                } else {
+                  notification.error({ message: 'Xóa thất bại', description: err.message || String(err) });
+                }
+              }
+            }}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button danger size="small">Xóa</Button>
+          </Popconfirm>
         </Space>
       ),
       width: 180
@@ -308,7 +336,7 @@ const GetAllStores = () => {
       >
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <Spin tip="Đang tải danh sách cửa hàng..." size="large" />
+            <Spin size="large" />
           </div>
         ) : (
           <Table

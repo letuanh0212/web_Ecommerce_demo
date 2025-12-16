@@ -23,6 +23,8 @@ import {
 } from "recharts";
 import { useNavigate } from 'react-router-dom';
 import api from "../../unti/axios.cusomize";
+import adminApi from "../../unti/api_admin";
+
 
 const { Title, Text } = Typography;
 
@@ -91,34 +93,26 @@ const AdminDashboard = () => {
       setLoading(true);
 
       try {
-        // 1) Users
+        // 1) Try getting aggregated stats from admin API
         let usersCount = 0;
-        try {
-          const users = await api.get('/api/users');
-          if (Array.isArray(users)) usersCount = users.length;
-        } catch (err) {
-          if (handle401(err)) return;
-          // ignore, leave as 0
-        }
-
-        // 2) Stores (try /api/stores then /api/sellers)
         let storesCount = 0;
+        let productsCount = 0;
+        let ordersCount = 0;
+        let ordersList = [];
+
         try {
-          const stores = await api.get('/api/stores');
-          if (Array.isArray(stores)) storesCount = stores.length;
+          const stats = await adminApi.getStats();
+          if (stats) {
+            usersCount = stats.users || 0;
+            storesCount = stats.stores || 0;
+            ordersCount = stats.orders || 0;
+          }
         } catch (err) {
           if (handle401(err)) return;
-          try {
-            const sellers = await api.get('/api/sellers');
-            if (Array.isArray(sellers)) storesCount = sellers.length;
-          } catch (err2) {
-            if (handle401(err2)) return;
-            // ignore
-          }
+          // fallback: leave counts as 0 and continue
         }
 
-        // 3) Products / Items
-        let productsCount = 0;
+        // products: still fetch items endpoint
         try {
           const items = await api.get('/api/items');
           if (Array.isArray(items)) productsCount = items.length;
@@ -126,47 +120,40 @@ const AdminDashboard = () => {
           if (handle401(err)) return;
         }
 
-        // 4) Orders - try to fetch all orders (backend may paginate)
-        let ordersCount = 0;
-        let ordersList = [];
+        // orders list: get via admin endpoint (needed for charts / recent orders)
         try {
-          const orders = await api.get('/api/orders');
+          const orders = await adminApi.getOrders(1000);
           if (Array.isArray(orders)) {
-            ordersCount = orders.length;
             ordersList = orders;
-          } else if (orders && orders.data && Array.isArray(orders.data)) {
-            ordersCount = orders.data.length;
-            ordersList = orders.data;
+            ordersCount = orders.length;
           }
         } catch (err) {
           if (handle401(err)) return;
-          // Try fallback endpoint `/api/orders/recent` or `/api/orders?limit=5`
-          try {
-            const recent = await api.get('/api/orders/recent');
-            if (Array.isArray(recent)) {
-              ordersCount = recent.length;
-              ordersList = recent;
-            }
-          } catch (_) { /* ignore */ }
+          console.log('Orders fetch error (admin):', err.message || err);
+          ordersList = [];
+          ordersCount = 0;
         }
 
-        // 5) Vouchers (optional)
+        // 5) Vouchers - skip for now
         let vouchersCount = 0;
-        try {
-          const vouchers = await api.get('/api/vouchers');
-          if (Array.isArray(vouchers)) vouchersCount = vouchers.length;
-        } catch (err) {
-          if (handle401(err)) return;
-        }
 
         // 6) Revenue & charts - best effort:
         let totalRevenue = 0;
-        // If ordersList has order.total and order.createdAt fields, we can compute revenue by month.
-        if (Array.isArray(ordersList) && ordersList.length > 0) {
-          // compute total revenue
-          totalRevenue = ordersList.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-
-          // build revenue per last 6 months
+        
+        // Lọc chỉ lấy orders với status = "Completed"
+        const completedOrders = Array.isArray(ordersList) 
+          ? ordersList.filter(o => o.status === 'Completed' || o.status === 'completed')
+          : [];
+        
+        if (completedOrders.length > 0) {
+          // Cộng tổng tiền từ các completed orders
+          totalRevenue = completedOrders.reduce((acc, o) => {
+            const amount = Number(o.totalAmount || o.total || o.total_amount || o.price || 0) || 0;
+            return acc + amount;
+          }, 0);
+          console.log(`Total Revenue from ${completedOrders.length} completed orders:`, totalRevenue);
+          
+          // Sử dụng completedOrders cho charts thay vì tất cả orders
           const now = new Date();
           const months = [];
           for (let i = 5; i >= 0; i--) {
@@ -176,9 +163,9 @@ const AdminDashboard = () => {
           }
           const monthIndexMap = Object.fromEntries(months.map((m, idx) => [m.key, idx]));
 
-          ordersList.forEach(o => {
+          completedOrders.forEach(o => {
             const ts = o.createdAt || o.date || o.created_at || o.order_date;
-            const total = Number(o.total) || 0;
+            const total = Number(o.totalAmount || o.total || o.total_amount || o.price || 0) || 0;
             if (!ts) return;
             const d = new Date(ts);
             if (isNaN(d)) return;
@@ -190,14 +177,13 @@ const AdminDashboard = () => {
           });
 
           const revenueChart = months.map(m => {
-            // convert to millions for UI (like "3.2" in original)
             return { month: m.key, value: Math.round((m.value / 1000000) * 10) / 10 };
           });
           setRevenueData(revenueChart);
 
-          // top items: if order items available
+          // top items: từ completed orders
           const itemCounts = {};
-          ordersList.forEach(o => {
+          completedOrders.forEach(o => {
             const items = o.items || o.order_items || o.lines || o.orderDetails;
             if (Array.isArray(items)) {
               items.forEach(it => {
@@ -213,26 +199,21 @@ const AdminDashboard = () => {
             .slice(0, 6);
           if (top.length > 0) setTopItems(top);
         } else {
-          // fallback: keep static minimal data if no orders available
+          // Fallback nếu không có completed orders
+          console.warn("No completed orders found");
           setRevenueData([
-            { month: "T1", value: 3.2 },
-            { month: "T2", value: 4.1 },
-            { month: "T3", value: 5.8 },
-            { month: "T4", value: 4.6 },
-            { month: "T5", value: 8.2 },
-            { month: "T6", value: 9.3 },
+            { month: "T1", value: 0 },
+            { month: "T2", value: 0 },
+            { month: "T3", value: 0 },
+            { month: "T4", value: 0 },
+            { month: "T5", value: 0 },
+            { month: "T6", value: 0 },
           ]);
-          setTopItems([
-            { name: "Áo Thun", sold: 520 },
-            { name: "Tai nghe", sold: 410 },
-            { name: "Balo", sold: 290 },
-            { name: "Giày", sold: 260 },
-            { name: "Điện thoại", sold: 180 },
-          ]);
+          setTopItems([]);
         }
 
-        // recent orders (take 5 most recent from ordersList)
-        const recent = (Array.isArray(ordersList) ? ordersList.slice().sort((a, b) => {
+        // recent orders (lấy 5 completed orders gần nhất)
+        const recent = (completedOrders.length > 0 ? completedOrders.slice().sort((a, b) => {
           const da = new Date(a.createdAt || a.date || a.created_at || a.order_date || 0).getTime();
           const db = new Date(b.createdAt || b.date || b.created_at || b.order_date || 0).getTime();
           return db - da;
@@ -240,7 +221,7 @@ const AdminDashboard = () => {
           key: o.id || o._id || idx,
           orderId: o.code || (o.id ? `#${o.id}` : `#${idx + 1}`),
           customer: (o.user && (o.user.name || o.user.fullName)) || o.customerName || o.customer || 'Khách lạ',
-          total: Number(o.total) || 0,
+          total: Number(o.totalAmount || o.total || o.total_amount || 0) || 0,
           status: o.status || o.state || 'Unknown',
           date: new Date(o.createdAt || o.date || o.created_at || o.order_date || Date.now()).toLocaleDateString(),
         }));
@@ -285,7 +266,7 @@ const AdminDashboard = () => {
     <>
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40 }}>
-          <Spin tip="Đang tải dữ liệu..." size="large" />
+          <Spin size="large" />
         </div>
       ) : (
         <>

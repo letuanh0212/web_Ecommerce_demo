@@ -1,8 +1,8 @@
 // src/pages/admin/GetAllOrders.jsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
-    Table, Button, Card, Typography, Tag, Input, Space, Popconfirm, message 
+    Table, Button, Card, Typography, Tag, Input, Space, Popconfirm, message, Spin, Row, Col, Statistic
 } from "antd";
 import { 
     SearchOutlined,
@@ -11,8 +11,11 @@ import {
     ClockCircleOutlined,
     CloseCircleOutlined,
     DollarCircleOutlined,
-    EyeOutlined
+    EyeOutlined,
+    ShoppingCartOutlined,
+    DollarOutlined
 } from "@ant-design/icons";
+//import { getAllOrdersApi, updateOrderStatusApi } from "../../unti/api";
 
 const { Title } = Typography;
 
@@ -78,21 +81,58 @@ const getStatusInfo = (status) => {
 };
 
 const GetAllOrders = () => {
-    const [orders, setOrders] = useState(initialOrdersData);
+    const [orders, setOrders] = useState([]);
     const [searchText, setSearchText] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    // Lấy dữ liệu orders từ API
+    useEffect(() => {
+        fetchAllOrders();
+    }, []);
+
+    const fetchAllOrders = async () => {
+        setLoading(true);
+        try {
+            const response = await getAllOrdersApi();
+            if (response?.data?.data) {
+                setOrders(response.data.data);
+            } else if (Array.isArray(response?.data)) {
+                setOrders(response.data);
+            } else {
+                message.error("Không thể tải danh sách đơn hàng");
+            }
+        } catch (error) {
+            console.error("Lỗi khi lấy orders:", error);
+            message.error("Lỗi khi tải danh sách đơn hàng");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Xem chi tiết
     const handleViewDetails = (record) => {
-        alert(`Xem chi tiết Đơn hàng ID: ${record.id}`);
+        alert(`Xem chi tiết Đơn hàng ID: ${record.id || record._id}`);
     };
 
     // Hủy đơn hàng
-    const handleCancelOrder = (id, customer) => {
-        setOrders(orders.map(order =>
-            order.id === id ? { ...order, status: "Cancelled" } : order
-        ));
-        message.warning(`Đã HỦY đơn hàng ID ${id} của ${customer}.`);
+    const handleCancelOrder = async (id, customer) => {
+        try {
+            await updateOrderStatusApi(id, "Cancelled");
+            setOrders(orders.map(order =>
+                order.id === id || order._id === id ? { ...order, status: "Cancelled" } : order
+            ));
+            message.warning(`Đã HỦY đơn hàng ID ${id} của ${customer}.`);
+        } catch (error) {
+            console.error("Lỗi khi hủy order:", error);
+            message.error("Không thể hủy đơn hàng");
+        }
     };
+
+    // Tính toán thống kê
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.total_amount || order.totalAmount || 0), 0);
+    const pendingOrders = orders.filter(o => o.status === "Pending").length;
+    const deliveredOrders = orders.filter(o => o.status === "Delivered").length;
 
     // Cột bảng
     const orderColumns = [
@@ -167,33 +207,89 @@ const GetAllOrders = () => {
     ];
 
     // Tìm kiếm
-    const filteredOrders = orders.filter(order =>
-        String(order.id).includes(searchText) ||
-        order.customer.toLowerCase().includes(searchText.toLowerCase()) ||
-        order.store_name.toLowerCase().includes(searchText.toLowerCase())
-    );
+    const filteredOrders = orders.filter(order => {
+        const orderId = String(order.id || order._id || "");
+        const customerName = (order.customer || order.userId?.name || "").toLowerCase();
+        const storeName = (order.store_name || order.storeId?.name || "").toLowerCase();
+        const searchLower = searchText.toLowerCase();
+        
+        return (
+            orderId.includes(searchText) ||
+            customerName.includes(searchLower) ||
+            storeName.includes(searchLower)
+        );
+    });
 
     return (
-        <Card
-            title={<Title level={4}>Quản Lý Đơn Hàng Toàn Hệ Thống</Title>}
-            extra={
-                <Input 
-                    placeholder="Tìm kiếm ID / Khách hàng / Store..."
-                    prefix={<SearchOutlined />}
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    style={{ width: 350 }}
-                />
-            }
-            style={{ borderRadius: 8, marginTop: 20 }}
-        >
-            <Table
-                columns={orderColumns}
-                dataSource={filteredOrders}
-                pagination={{ pageSize: 10 }}
-                scroll={{ x: "max-content" }}
-            />
-        </Card>
+        <>
+            {/* Thống kê */}
+            <Row gutter={16} style={{ marginBottom: 24 }}>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card>
+                        <Statistic
+                            title="Tổng Đơn Hàng"
+                            value={totalOrders}
+                            prefix={<ShoppingCartOutlined />}
+                            valueStyle={{ color: '#1890ff' }}
+                        />
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card>
+                        <Statistic
+                            title="Tổng Doanh Thu"
+                            value={totalRevenue}
+                            prefix={<DollarOutlined />}
+                            suffix="₫"
+                            valueStyle={{ color: '#52c41a' }}
+                            formatter={(value) => (value || 0).toLocaleString('vi-VN')}
+                        />
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card>
+                        <Statistic
+                            title="Chờ Xử Lý"
+                            value={pendingOrders}
+                            valueStyle={{ color: '#faad14' }}
+                        />
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card>
+                        <Statistic
+                            title="Đã Giao"
+                            value={deliveredOrders}
+                            valueStyle={{ color: '#52c41a' }}
+                        />
+                    </Card>
+                </Col>
+            </Row>
+
+            <Card
+                title={<Title level={4}>Quản Lý Đơn Hàng Toàn Hệ Thống</Title>}
+                extra={
+                    <Input 
+                        placeholder="Tìm kiếm ID / Khách hàng / Store..."
+                        prefix={<SearchOutlined />}
+                        value={searchText}
+                        onChange={(e) => setSearchText(e.target.value)}
+                        style={{ width: 350 }}
+                    />
+                }
+                style={{ borderRadius: 8 }}
+            >
+                <Spin spinning={loading}>
+                    <Table
+                        columns={orderColumns}
+                        dataSource={filteredOrders}
+                        rowKey={(record) => record.id || record._id}
+                        pagination={{ pageSize: 10 }}
+                        scroll={{ x: "max-content" }}
+                    />
+                </Spin>
+            </Card>
+        </>
     );
 };
 

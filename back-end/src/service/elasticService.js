@@ -54,47 +54,6 @@ async function createIndex(force = false) {
   }
 }
 
-// // Sync all items from SQL -> ES (bulk version recommended)
-// async function syncItems() {
-//   try {
-//     const pool = await poolPromise;
-//     const result = await pool.request().query('SELECT i.id, i.name, i.description, i.price, i.store_id AS storeId, i.category_id AS categoryId, i.createdAt, i.updatedAt, c.name AS category_name FROM Items i LEFT JOIN Categories c ON i.category_id = c.id');
-
-//     if (!result.recordset.length) {
-//       console.log('No items to sync');
-//       return;
-//     }
-
-//     // bulk indexing for performance
-//     const body = [];
-//     for (const item of result.recordset) {
-//       body.push({ index: { _index: INDEX_NAME, _id: item.id } });
-//       body.push({
-//         id: item.id,
-//         name: item.name || '',
-//         description: item.description || '',
-//         category_name: item.category_name || '',
-//         price: item.price || 0,
-//         store_id: item.storeId || null,
-//         category_id: item.categoryId || null,
-//         createdAt: item.createdAt,
-//         updatedAt: item.updatedAt
-//       });
-//     }
-
-//     const bulkRes = await client.bulk({ refresh: true, body });
-//     if (bulkRes.body.errors) {
-//       console.warn("Bulk indexing completed with errors (check items).");
-//     } else {
-//       console.log("All items synced to Elasticsearch (bulk)!");
-//     }
-//   } catch (err) {
-//     console.error('Error syncing items:', err);
-//     throw err;
-//   }
-// }
-
-// Search items (keeps original behavior; include category_name field)
 async function searchItemsService(keyword) {
   if (!keyword) return [];
 

@@ -10,7 +10,8 @@ import HomeBanner from "../component/home/HomeBanner.jsx";
 import HomeCategories from "../component/home/HomeCategories.jsx";
 import HomeRecommended from "../component/home/HomeRecommended.jsx";
 import HomeProducts from "../component/home/HomeProducts.jsx";
-import ProductVariantModal from "../models/ProductVariantModel.jsx"
+import ProductVariantModal from "../models/ProductVariantModel.jsx";
+import Footer from "../component/footer_user.jsx";
 
 const { Title } = Typography;
 
@@ -79,9 +80,9 @@ const HomePage = () => {
   }, []);
 
   return (
-    <div style={{ background: "#f5f5f5", minHeight: "100vh" }}>
+    <><div style={{ background: "#f5f5f5", minHeight: "100vh" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "15px" }}>
-        
+
         {/* BANNER */}
         <div style={{ marginBottom: "25px" }}>
           <HomeBanner userRole={userRole} />
@@ -99,24 +100,23 @@ const HomePage = () => {
         >
           <HomeCategories
             products={products}
-            onFilter={(list) => setFilteredProducts(list)}
-          />
+            onFilter={(list) => setFilteredProducts(list)} />
         </div>
 
         {/* RECOMMENDED */}
         {/* {recommended.length > 0 && (
-          <div
-            style={{
-              background: "#fff",
-              padding: "20px",
-              borderRadius: "14px",
-              boxShadow: "0 3px 10px rgba(0,0,0,0.06)",
-              marginBottom: "25px",
-            }}
-          >
-            <HomeRecommended recommended={recommended} loading={loadingRecommend} />
-          </div>
-        )} */}
+      <div
+        style={{
+          background: "#fff",
+          padding: "20px",
+          borderRadius: "14px",
+          boxShadow: "0 3px 10px rgba(0,0,0,0.06)",
+          marginBottom: "25px",
+        }}
+      >
+        <HomeRecommended recommended={recommended} loading={loadingRecommend} />
+      </div>
+    )} */}
         {/* RECOMMENDED */}
         <div
           style={{
@@ -135,8 +135,7 @@ const HomePage = () => {
             onOpenModal={(product) => {
               setSelectedProduct(product);
               setIsModalVisible(true);
-            }}
-          />
+            } } />
         </div>
 
         {/* PRODUCTS */}
@@ -159,8 +158,7 @@ const HomePage = () => {
               onOpenModal={(product) => {
                 setSelectedProduct(product);
                 setIsModalVisible(true);
-              }}
-            />
+              } } />
           )}
         </div>
 
@@ -168,11 +166,10 @@ const HomePage = () => {
         <ProductVariantModal
           visible={isModalVisible}
           onClose={() => setIsModalVisible(false)}
-          product={selectedProduct}
-        />
+          product={selectedProduct} />
 
       </div>
-    </div>
+    </div><Footer /></>
   );
 };
 

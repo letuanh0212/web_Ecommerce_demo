@@ -1,48 +1,89 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { Facebook, Instagram, Phone, Mail } from "lucide-react";
+import { Row, Col, Typography, Divider } from "antd";
+import {
+  FacebookOutlined,
+  InstagramOutlined,
+  YoutubeOutlined,
+  MailOutlined,
+  PhoneOutlined,
+} from "@ant-design/icons";
 
-export default function Footer() {
+const { Title, Text } = Typography;
+
+const Footer = () => {
   return (
-    <footer className="bg-gray-900 text-white py-10 mt-10">
-      <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Logo + description */}
-        <div>
-          <h2 className="text-2xl font-bold mb-3">MyShop</h2>
-          <p className="text-gray-300">
-            Trang thương mại điện tử hiện đại – mua sắm dễ dàng, nhanh chóng và tiện lợi.
-          </p>
-        </div>
+    <div
+      style={{
+        background: "#111",
+        color: "#fff",
+        marginTop: "40px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "40px 15px 20px",
+        }}
+      >
+        <Row gutter={[24, 24]}>
+          {/* LOGO + DESCRIPTION */}
+          <Col xs={24} md={8}>
+            <Title level={4} style={{ color: "#fff" }}>
+              🛒 My Shop
+            </Title>
+            <Text style={{ color: "#bbb" }}>
+              Nền tảng mua sắm trực tuyến uy tín, đa dạng sản phẩm, 
+              giao hàng nhanh chóng và hỗ trợ tận tâm.
+            </Text>
+          </Col>
 
-        {/* Quick Links */}
-        <div>
-          <h3 className="text-xl font-semibold mb-3">Liên kết nhanh</h3>
-          <ul className="space-y-2">
-            <li><Link to="/" className="hover:underline">Trang chủ</Link></li>
-            <li><Link to="/products" className="hover:underline">Sản phẩm</Link></li>
-            <li><Link to="/about" className="hover:underline">Giới thiệu</Link></li>
-            <li><Link to="/contact" className="hover:underline">Liên hệ</Link></li>
-          </ul>
-        </div>
+          {/* LINKS */}
+          <Col xs={24} md={8}>
+            <Title level={5} style={{ color: "#fff" }}>
+              Liên kết nhanh
+            </Title>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <Text style={{ color: "#bbb", cursor: "pointer" }}>Trang chủ</Text>
+              <Text style={{ color: "#bbb", cursor: "pointer" }}>Sản phẩm</Text>
+              <Text style={{ color: "#bbb", cursor: "pointer" }}>Danh mục</Text>
+              <Text style={{ color: "#bbb", cursor: "pointer" }}>Giỏ hàng</Text>
+            </div>
+          </Col>
 
-        {/* Contact */}
-        <div>
-          <h3 className="text-xl font-semibold mb-3">Liên hệ</h3>
-          <ul className="space-y-3">
-            <li className="flex items-center gap-2"><Phone size={18}/> 0123 456 789</li>
-            <li className="flex items-center gap-2"><Mail size={18}/> support@myshop.com</li>
-            <li className="flex items-center gap-2"><Facebook size={18}/> Facebook</li>
-            <li className="flex items-center gap-2"><Instagram size={18}/> Instagram</li>
-          </ul>
+          {/* CONTACT */}
+          <Col xs={24} md={8}>
+            <Title level={5} style={{ color: "#fff" }}>
+              Liên hệ
+            </Title>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <Text style={{ color: "#bbb" }}>
+                <MailOutlined /> support@ecommerce.com
+              </Text>
+              <Text style={{ color: "#bbb" }}>
+                <PhoneOutlined /> 0123 456 789
+              </Text>
+
+              <div style={{ marginTop: 10, display: "flex", gap: 12 }}>
+                <FacebookOutlined style={{ fontSize: 20, color: "#bbb" }} />
+                <InstagramOutlined style={{ fontSize: 20, color: "#bbb" }} />
+                <YoutubeOutlined style={{ fontSize: 20, color: "#bbb" }} />
+              </div>
+            </div>
+          </Col>
+        </Row>
+
+        <Divider style={{ borderColor: "#333", margin: "30px 0 15px" }} />
+
+        {/* COPYRIGHT */}
+        <div style={{ textAlign: "center" }}>
+          <Text style={{ color: "#777" }}>
+            © {new Date().getFullYear()} My Ecommerce. All rights reserved.
+          </Text>
         </div>
       </div>
-
-      {/* Bottom */}
-      <div className="border-t border-gray-700 mt-8 pt-5 text-center text-gray-400">
-        © {new Date().getFullYear()} MyShop • All rights reserved.
-      </div>
-    </footer>
+    </div>
   );
-}
+};
 
-export { Footer };
+export default Footer;

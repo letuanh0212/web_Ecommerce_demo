@@ -133,41 +133,79 @@ const getOrdersByUserService = async (userId) => {
 // ===========================
 // 3. GET ORDER DETAILS
 // ===========================
-const getOrderDetailService = async (orderId, userId) => {
-    const pool = await poolPromise;
+// const getOrderDetailService = async (orderId, userId) => {
+//     const pool = await poolPromise;
 
-    const orderResult = await pool.request()
-        .input("id", sql.Int, orderId)
-        .query(`SELECT * FROM Orders WHERE id = @id`);
+//     const orderResult = await pool.request()
+//         .input("id", sql.Int, orderId)
+//         .query(`SELECT * FROM Orders WHERE id = @id`);
 
-    if (orderResult.recordset.length === 0) return null;
+//     if (orderResult.recordset.length === 0) return null;
 
-    const order = orderResult.recordset[0];
+//     const order = orderResult.recordset[0];
 
-    // Check quyền user
-    if (userId && order.user_id !== userId)
-        throw new Error("Access denied");
+//     // Check quyền user
+//     if (userId && order.user_id !== userId)
+//         throw new Error("Access denied");
 
-    // Lấy items
-    const itemsResult = await pool.request()
-        .input("order_id", sql.Int, orderId)
-        .query(`
-            SELECT 
-                oi.*,
-                i.name AS item_name,
-                COALESCE(iv.image, 
-                    (SELECT TOP 1 image FROM ItemImages WHERE item_id = i.id)
-                ) AS item_image
-            FROM OrderItems oi
-            JOIN Items i ON oi.item_id = i.id
-            LEFT JOIN ItemVariants iv ON oi.variant_id = iv.id
-            WHERE oi.order_id = @order_id
-        `);
+//     // Lấy items
+//     const itemsResult = await pool.request()
+//         .input("order_id", sql.Int, orderId)
+//         .query(`
+//             SELECT 
+//                 oi.*,
+//                 i.name AS item_name,
+//                 COALESCE(iv.image, 
+//                     (SELECT TOP 1 image FROM ItemImages WHERE item_id = i.id)
+//                 ) AS item_image
+//             FROM OrderItems oi
+//             JOIN Items i ON oi.item_id = i.id
+//             LEFT JOIN ItemVariants iv ON oi.variant_id = iv.id
+//             WHERE oi.order_id = @order_id
+//         `);
 
-    order.items = itemsResult.recordset;
-    return order;
+//     order.items = itemsResult.recordset;
+//     return order;
+// };
+
+
+const getOrderDetailService = async (orderId, userId) => { // userId để check quyền xem
+    try {
+        const pool = await poolPromise;
+        
+        // Lấy thông tin chung
+        const orderResult = await pool.request()
+            .input("id", sql.Int, orderId)
+            .query("SELECT * FROM Orders WHERE id = @id");
+
+        if (orderResult.recordset.length === 0) return null;
+        const order = orderResult.recordset[0];
+
+        // Check quyền (Chỉ chủ đơn hoặc Admin/Seller mới được xem - tạm thời check chủ đơn)
+        // if (order.user_id !== userId) throw new Error("Forbidden"); 
+
+        // Lấy chi tiết món
+        const itemsResult = await pool.request()
+            .input("order_id", sql.Int, orderId)
+            .query(`
+                SELECT 
+                    oi.*, 
+                    i.name as item_name, 
+                    -- Ưu tiên lấy ảnh của variant (nếu có), nếu không thì lấy ảnh chính của sản phẩm
+                    COALESCE(iv.image, (SELECT TOP 1 image FROM ItemImages WHERE item_id = i.id)) as item_image
+                FROM OrderItems oi
+                JOIN Items i ON oi.item_id = i.id
+                -- Dùng LEFT JOIN vì không phải sản phẩm nào trong đơn hàng cũng có variant
+                LEFT JOIN ItemVariants iv ON oi.variant_id = iv.id
+                WHERE oi.order_id = @order_id
+            `);
+
+        order.items = itemsResult.recordset;
+        return order;
+    } catch (err) {
+        throw new Error(err.message);
+    }
 };
-
 
 // ===========================
 // 4. UPDATE ORDER STATUS

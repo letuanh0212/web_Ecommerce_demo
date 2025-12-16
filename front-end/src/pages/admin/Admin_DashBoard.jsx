@@ -93,7 +93,7 @@ const AdminDashboard = () => {
       setLoading(true);
 
       try {
-        // 1) Try getting aggregated stats from admin API
+        // 1) Users = user + seller (LÀM Ở FRONTEND)
         let usersCount = 0;
         let storesCount = 0;
         let productsCount = 0;
@@ -101,16 +101,31 @@ const AdminDashboard = () => {
         let ordersList = [];
 
         try {
-          const stats = await adminApi.getStats();
-          if (stats) {
-            usersCount = stats.users || 0;
-            storesCount = stats.stores || 0;
-            ordersCount = stats.orders || 0;
-          }
+          const [users, sellers] = await Promise.all([
+            adminApi.getUsers(),     // role = user
+            adminApi.getSellers(),   // role = seller
+          ]);
+
+          const userLength = Array.isArray(users) ? users.length : 0;
+          const sellerLength = Array.isArray(sellers) ? sellers.length : 0;
+
+          usersCount = userLength + sellerLength; // 👈 USER + SELLER
+
+          console.log("Users:", userLength, "Sellers:", sellerLength);
         } catch (err) {
           if (handle401(err)) return;
-          // fallback: leave counts as 0 and continue
+          console.error("Fetch users/sellers error:", err);
         }
+
+        // ================= STORES =================
+          try {
+            const stores = await adminApi.getStores();
+            storesCount = Array.isArray(stores) ? stores.length : 0;
+            console.log("Stores:", storesCount);
+          } catch (err) {
+            if (handle401(err)) return;
+            console.error("Fetch stores error:", err);
+          }
 
         // products: still fetch items endpoint
         try {
@@ -220,7 +235,7 @@ const AdminDashboard = () => {
         }).slice(0, 5) : []).map((o, idx) => ({
           key: o.id || o._id || idx,
           orderId: o.code || (o.id ? `#${o.id}` : `#${idx + 1}`),
-          customer: (o.user && (o.user.name || o.user.fullName)) || o.customerName || o.customer || 'Khách lạ',
+          customer: (o.users && (o.users.name )) || 'Khách Hàng',
           total: Number(o.totalAmount || o.total || o.total_amount || 0) || 0,
           status: o.status || o.state || 'Unknown',
           date: new Date(o.createdAt || o.date || o.created_at || o.order_date || Date.now()).toLocaleDateString(),

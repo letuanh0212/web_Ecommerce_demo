@@ -103,16 +103,16 @@ async function deleteVariant(req, res) {
 
 async function getAllItems(req, res) {
     try {
-        const pool = await poolPromise;
-        const result = await pool.request().query("SELECT * FROM Items ");
-        return res.json(result.recordset);
+        // Thay vì query trực tiếp, ta gọi Service để lấy đầy đủ dữ liệu (ảnh, variants...)
+        const items = await itemService.getAllItemsService(); 
+        return res.status(200).json(items);
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
 }
 
 
-module.exports = {
+module.exports = {  
     createItem,
     getItemsByStore,
     getItemDetail,

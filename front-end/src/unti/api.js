@@ -77,7 +77,31 @@ const cancelOrderApi = (orderId) => {
     return instance.post(`/api/orders/${orderId}/cancel`);
 };
 
+// ======================
+// ADMIN
+// ======================
+const getUsersApi = () =>
+  instance.get("/api/admin/users");
 
+// Sellers
+const getSellersApi = () =>
+  instance.get("/api/admin/sellers");
+
+// Orders list (limit optional)
+const getOrdersApi = (limit = 1000) =>
+  instance.get(`/api/admin/orders?limit=${limit}`);
+
+// Delete store
+const deleteStoreApi = (storeId) =>
+  instance.delete(`/api/admin/stores/${storeId}`);
+
+const getAllOrdersApi = () => {
+    return instance.get("/api/admin/orders");
+};
+
+const getStatsApi = () => {
+    return instance.get("/api/admin/stats");
+}
 // ======================
 // EXPORT
 // ======================
@@ -98,4 +122,11 @@ export {
     getUserOrderHistoryApi,
     getOrderDetailApi,
     cancelOrderApi,
+
+    getAllOrdersApi,
+    getStatsApi,
+    getUsersApi,
+    getSellersApi,
+    getOrdersApi,
+    deleteStoreApi,
 };

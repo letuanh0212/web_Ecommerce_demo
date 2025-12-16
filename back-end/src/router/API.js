@@ -165,6 +165,7 @@ routerAPI.get("/vouchers/admin", verifyToken, checkRole(['admin']), async (req, 
 routerAPI.use("/items", require("./item.routes"));
 routerAPI.use("/categories", require("./category.routes"));
 routerAPI.use("/item-variants", require("./itemVariant.routes"));
+routerAPI.use('/admin', require('./admin.routes'));
 
 routerAPI.use("/articles", require("./article.routes"));
 routerAPI.use("/orders", require("./order.routes"));

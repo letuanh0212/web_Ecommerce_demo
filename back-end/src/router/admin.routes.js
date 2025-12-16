@@ -27,28 +27,10 @@ router.get('/sellers', async (req, res) => {
 });
 
 // Example: basic dashboard stats (counts)
-router.get('/stats', async (req, res) => {
+router.get('/stores', async (req, res) => {
   try {
-    const pool = await poolPromise;
-
-    // Users and sellers counts via existing controllers (may be heavier on DB)
-    const users = await GetAllUsers();
-    const sellers = await GetAllsellers();
-
-    // Orders count via direct SQL (Orders table expected)
-    const ordersResult = await pool.request().query('SELECT COUNT(*) AS totalOrders FROM Orders');
-    const totalOrders = ordersResult.recordset && ordersResult.recordset[0] ? ordersResult.recordset[0].totalOrders : 0;
-
-    // Stores count via direct SQL (Stores table expected)
-    const storesResult = await pool.request().query('SELECT COUNT(*) AS totalStores FROM Stores');
-    const totalStores = storesResult.recordset && storesResult.recordset[0] ? storesResult.recordset[0].totalStores : 0;
-
-    res.json({
-      users: Array.isArray(users) ? users.length : null,
-      sellers: Array.isArray(sellers) ? sellers.length : null,
-      orders: totalOrders,
-      stores: totalStores
-    });
+    const stores = await GetAllstores();
+    res.json(stores);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }

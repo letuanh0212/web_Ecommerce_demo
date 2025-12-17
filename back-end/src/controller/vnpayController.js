@@ -2,6 +2,7 @@ const orderService = require("../service/orderService");
 const { sendOrderPaymentEmail } = require("../service/emailService");
 const { poolPromise, sql } = require("../config/Sql");
 const { VNPay } = require("vnpay");
+const crypto = require('crypto');
 
 const vnpay = new VNPay({
     tmnCode: process.env.VNP_TMNCODE,
@@ -10,6 +11,9 @@ const vnpay = new VNPay({
     testMode: true,
     hashAlgorithm: 'SHA512',
 });
+
+// Temporary storage for pending orders
+const pendingOrders = new Map();
 
 // ---------- CREATE PAYMENT URL (CHUẨN VNPAY) ----------
 const createVnpayOrderService = async (req, res) => {
@@ -23,17 +27,16 @@ const createVnpayOrderService = async (req, res) => {
 
         console.log("[vnpayController] create called", { userId, itemsCount: items.length });
 
-        // 1. Tạo đơn trước
-        const order = await orderService.createCODOrderService(
-            userId,
-            { items, shipping_name, shipping_phone, shipping_address, note }
-        );
+        // Generate unique transaction reference
+        const txnRef = crypto.randomUUID();
 
-        const orderId = order.orderId;
-        const amount = order.totalAmount; // VND
+        // Store order data temporarily
+        pendingOrders.set(txnRef, { userId, items, shipping_name, shipping_phone, shipping_address, note });
 
-        // 2. CHỈ NHÂN 100 TẠI ĐÂY
-        const vnpAmount = amount;
+        // Calculate amount
+        let totalAmount = 0;
+        items.forEach(i => totalAmount += i.price * i.quantity);
+        const vnpAmount = totalAmount;
 
         let ipAddr = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : req.socket.remoteAddress;
         if (ipAddr === '::1' || ipAddr === '::ffff:127.0.0.1' || ipAddr.startsWith('::ffff:')) {
@@ -44,20 +47,19 @@ const createVnpayOrderService = async (req, res) => {
             vnp_Amount: vnpAmount,
             vnp_IpAddr: ipAddr,
             vnp_ReturnUrl: process.env.VNP_RETURN_URL,
-            vnp_TxnRef: orderId.toString(),
-            vnp_OrderInfo: `Thanh toán đơn hàng #${orderId}`,
+            vnp_TxnRef: txnRef,
+            vnp_OrderInfo: `Thanh toán đơn hàng`,
         });
 
-        console.log("[vnpayController] created order and paymentUrl", {
-            orderId,
-            amount,
+        console.log("[vnpayController] created paymentUrl", {
+            txnRef,
             vnpAmount,
             paymentUrl
         });
 
         return res.json({
             success: true,
-            orderId,
+            txnRef,
             paymentUrl,
             vnpAmount
         });
@@ -80,11 +82,25 @@ const vnpayReturn = async (req, res) => {
             return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
         }
 
+        const txnRef = req.query.vnp_TxnRef;
+
+        // Get stored order data
+        const orderData = pendingOrders.get(txnRef);
+        if (!orderData) {
+            console.error('[vnpayController] No pending order found for txnRef:', txnRef);
+            return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+        }
+
+        // Create the order now that payment is successful
+        const order = await orderService.createCODOrderService(
+            orderData.userId,
+            orderData
+        );
+
+        const orderId = order.orderId;
+
+        // Update order status to paid
         const pool = await poolPromise;
-
-        const orderId = req.query.vnp_TxnRef;
-
-        // Update order
         await pool.request()
             .input("id", sql.Int, orderId)
             .query(`UPDATE Orders SET status='paid', updatedAt=GETDATE() WHERE id=@id`);
@@ -129,7 +145,11 @@ const vnpayReturn = async (req, res) => {
             );
         }
 
-        return res.redirect(`${process.env.FRONTEND_URL}/`);
+        // Clean up pending order
+        pendingOrders.delete(txnRef);
+
+        return res.redirect(`${process.env.FRONTEND_URL}/payment-success?orderId=${orderId}`);
+
     } catch (err) {
         console.error(err);
         return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);

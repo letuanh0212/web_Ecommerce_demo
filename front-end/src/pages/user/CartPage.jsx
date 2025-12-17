@@ -129,7 +129,7 @@ const confirmCheckout = async () => {
 
           setCheckoutModalVisible(false);
 
-          navigate("/user"); // đi đến lịch sử đơn hàng
+          navigate("/");
         } else {
           message.error(resp?.message || "Đặt hàng thất bại.");
         }

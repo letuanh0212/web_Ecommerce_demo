@@ -333,7 +333,7 @@ const AdminDashboard = () => {
 
           <Card
             title="Đơn hàng mới nhất"
-            extra={<Button type="link" onClick={() => navigate("/admin/orders")}>Xem tất cả</Button>}
+            extra={<Button type="link" onClick={() => navigate("/Admin/orders")}>Xem tất cả</Button>}
             style={{ marginTop: 20, borderRadius: 10 }}
           >
             <Table
@@ -362,10 +362,10 @@ const AdminDashboard = () => {
           <Title level={4} style={{ marginTop: 20 }}>Truy cập nhanh</Title>
           <Row gutter={20}>
             {[
-              { label: "Quản lý Đơn hàng", path: "/admin/orders", icon: <ShoppingCartOutlined /> },
-              { label: "Quản lý Người dùng", path: "/admin/users", icon: <UserOutlined /> },
-              { label: "Danh sách Cửa hàng", path: "/admin/stores", icon: <ShopOutlined /> },
-              { label: "Voucher", path: "/admin/vouchers", icon: <GiftOutlined /> },
+              { label: "Quản lý Đơn hàng", path: "/Admin/orders", icon: <ShoppingCartOutlined /> },
+              { label: "Quản lý Người dùng", path: "/Admin/users", icon: <UserOutlined /> },
+              { label: "Danh sách Cửa hàng", path: "/Admin/stores", icon: <ShopOutlined /> },
+              { label: "Voucher", path: "/Admin/vouchers", icon: <GiftOutlined /> },
             ].map((btn, i) => (
               <Col key={i} xs={12} sm={6}>
                 <Button

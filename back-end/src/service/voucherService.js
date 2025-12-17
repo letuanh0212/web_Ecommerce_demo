@@ -8,7 +8,11 @@ const checkStoreOwnership = async (storeId, userId) => {
         .query(`SELECT owner_id FROM Stores WHERE id=@id`);
 
     if (result.recordset.length === 0) return false;
-    return result.recordset[0].owner_id === userId;
+    const ownerId = result.recordset[0].owner_id;
+    // log for debugging ownership checks
+    console.log(`checkStoreOwnership: storeId=${storeId}, ownerId=${ownerId}, userId=${userId}`);
+    // allow loose equality to tolerate string/number types from token
+    return ownerId == userId;
 };
 
 // CHECK DUPLICATE VOUCHER CODE
@@ -246,6 +250,90 @@ const applyVoucherService = async (userId, storeId, code, orderId) => {
     }
 };
 
+// GET USER'S SAVED VOUCHERS
+const getUserVouchersService = async (userId) => {
+    try {
+        const pool = await poolPromise;
+
+        const result = await pool.request()
+            .input("user_id", sql.Int, userId)
+            .query(`
+                SELECT 
+                    uv.id as user_voucher_id,
+                    uv.max_uses,
+                    uv.used_count,
+                    v.id,
+                    v.code,
+                    v.discount_type,
+                    v.discount_value,
+                    v.min_order_value,
+                    v.quantity,
+                    v.start_date,
+                    v.end_date,
+                    v.store_id,
+                    s.name as store_name
+                FROM UserVouchers uv
+                JOIN Vouchers v ON uv.voucher_id = v.id
+                LEFT JOIN Stores s ON v.store_id = s.id
+                WHERE uv.user_id = @user_id
+                AND uv.used_count < uv.max_uses
+                ORDER BY v.end_date ASC
+            `);
+
+        return result.recordset;
+    } catch (err) {
+        throw new Error(err.message);
+    }
+};
+
+// SAVE VOUCHER (User saves voucher to their collection)
+const saveVoucherService = async (userId, voucherId) => {
+    try {
+        const pool = await poolPromise;
+
+        // Check voucher exists
+        const voucherRes = await pool.request()
+            .input("id", sql.Int, voucherId)
+            .query("SELECT id, quantity FROM Vouchers WHERE id=@id");
+
+        if (voucherRes.recordset.length === 0)
+            throw new Error("Voucher does not exist");
+
+        const voucher = voucherRes.recordset[0];
+
+        // Check if user already saved this voucher
+        const existRes = await pool.request()
+            .input("user_id", sql.Int, userId)
+            .input("voucher_id", sql.Int, voucherId)
+            .query("SELECT id FROM UserVouchers WHERE user_id=@user_id AND voucher_id=@voucher_id");
+
+        if (existRes.recordset.length > 0)
+            throw new Error("Voucher already saved");
+
+        // Insert into UserVouchers
+        const result = await pool.request()
+            .input("user_id", sql.Int, userId)
+            .input("voucher_id", sql.Int, voucherId)
+            .input("max_uses", sql.Int, 1)
+            .input("used_count", sql.Int, 0)
+            .query(`
+                INSERT INTO UserVouchers (user_id, voucher_id, max_uses, used_count)
+                OUTPUT INSERTED.*
+                VALUES (@user_id, @voucher_id, @max_uses, @used_count)
+            `);
+
+        // Decrement voucher quantity
+        await pool.request()
+            .input("id", sql.Int, voucherId)
+            .query("UPDATE Vouchers SET quantity = quantity - 1 WHERE id=@id AND quantity > 0");
+
+        return result.recordset[0];
+
+    } catch (err) {
+        throw new Error(err.message);
+    }
+};
+
 module.exports = {
     checkStoreOwnership,
     createVoucherService,
@@ -253,5 +341,7 @@ module.exports = {
     getVoucherByCodeService,
     updateVoucherService,
     deleteVoucherService,
-    applyVoucherService
+    applyVoucherService,
+    saveVoucherService,
+    getUserVouchersService
 };

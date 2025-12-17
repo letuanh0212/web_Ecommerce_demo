@@ -13,11 +13,13 @@ const createOrder = async (req, res) => {
       shipping_address,
       note,
       paymentMethod,
+      voucher_id,
+      discount_amount,
     } = req.body;
 
     const email = req.user?.email || req.body?.email || null;
 
-    console.log("[orderController] createOrder called", { userId, itemsCount: items?.length, paymentMethod });
+    console.log("[orderController] createOrder called", { userId, itemsCount: items?.length, paymentMethod, voucher_id, discount_amount });
 
     if (!items || items.length === 0) {
       console.log("[orderController] empty cart");
@@ -32,10 +34,12 @@ const createOrder = async (req, res) => {
       shipping_phone,
       shipping_address,
       note,
+      voucher_id,
+      discount_amount,
     });
 
     const orderId = orderRes.orderId;
-    console.log("[orderController] order created", { orderId, total: orderRes.totalAmount });
+    console.log("[orderController] order created", { orderId, totalAmount: orderRes.totalAmount, finalAmount: orderRes.finalAmount });
 
     // Lấy chi tiết order để lấy tên sản phẩm cho email
     const orderDetail = await orderService.getOrderDetailService(orderId, userId);
@@ -47,7 +51,7 @@ const createOrder = async (req, res) => {
         await sendOrderPaymentEmail(
           email,
           orderId,
-          orderRes.totalAmount || orderRes.finalAmount || 0,
+          orderRes.finalAmount || orderRes.totalAmount || 0,
           // map items to shape emailService expects (name, quantity, price)
           (orderDetail.items || []).map(i => ({ name: i.item_name || i.name || '', quantity: i.quantity, price: i.price })),
           shipping_name,
@@ -63,7 +67,13 @@ const createOrder = async (req, res) => {
       console.log('[orderController] no email available to send confirmation');
     }
 
-    return res.json({ success: true, order_id: orderId, total: orderRes.totalAmount || orderRes.finalAmount || 0 });
+    return res.json({ 
+      success: true, 
+      order_id: orderId, 
+      total: orderRes.totalAmount || orderRes.finalAmount || 0,
+      totalAmount: orderRes.totalAmount,
+      finalAmount: orderRes.finalAmount
+    });
 
   } catch (err) {
     console.error("COD Order Error:", err);

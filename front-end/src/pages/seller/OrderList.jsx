@@ -78,7 +78,7 @@ const OrderList = () => {
     { title: "Khách hàng", dataIndex: "user_name" },
     { 
       title: "Tổng tiền", 
-      dataIndex: "total_amount",
+      dataIndex: "final_amount",
       render: (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
     },
     { title: "Ngày đặt", dataIndex: "createdAt", render: (date) => new Date(date).toLocaleString() },

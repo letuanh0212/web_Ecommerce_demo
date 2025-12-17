@@ -5,23 +5,24 @@ const { poolPromise, sql } = require("../config/Sql");
 // 1. CREATE ORDER
 // ===========================
 const createCODOrderService = async (userId, data) => {
-    const { items, shipping_name, shipping_phone, shipping_address, note } = data;
+    const { items, shipping_name, shipping_phone, shipping_address, note, voucher_id, discount_amount } = data;
 
-    console.log("[orderService] createCODOrderService called", { userId, itemsCount: items?.length });
+    console.log("[orderService] createCODOrderService called", { userId, itemsCount: items?.length, voucher_id, discount_amount });
 
     if (!items || items.length === 0) throw new Error("No items in order");
 
     let totalAmount = 0;
     items.forEach(i => totalAmount += i.price * i.quantity);
 
-    const finalAmount = totalAmount;
+    // Apply discount if voucher provided
+    const finalAmount = totalAmount - (discount_amount || 0);
 
     const pool = await poolPromise;
 
     const transaction = new sql.Transaction(pool);
 
     try {
-        console.log("[orderService] beginning transaction for order, totalAmount:", totalAmount);
+        console.log("[orderService] beginning transaction for order, totalAmount:", totalAmount, "finalAmount:", finalAmount);
         await transaction.begin();
 
         // Create order inside transaction
@@ -42,6 +43,28 @@ const createCODOrderService = async (userId, data) => {
             `);
 
         const orderId = orderResult.recordset[0].id;
+
+        // If voucher is applied, create OrderVouchers record
+        if (voucher_id && discount_amount) {
+            await new sql.Request(transaction)
+                .input("order_id", sql.Int, orderId)
+                .input("voucher_id", sql.Int, voucher_id)
+                .input("discount_amount", sql.Decimal(18, 2), discount_amount)
+                .query(`
+                    INSERT INTO OrderVouchers (order_id, voucher_id, discount_amount)
+                    VALUES (@order_id, @voucher_id, @discount_amount)
+                `);
+
+            // Increment used_count for UserVouchers
+            await new sql.Request(transaction)
+                .input("user_id", sql.Int, userId)
+                .input("voucher_id", sql.Int, voucher_id)
+                .query(`
+                    UPDATE UserVouchers
+                    SET used_count = used_count + 1
+                    WHERE user_id = @user_id AND voucher_id = @voucher_id
+                `);
+        }
 
         // Insert order items and decrement stock
         for (let it of items) {

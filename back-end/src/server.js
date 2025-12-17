@@ -12,8 +12,8 @@ const { syncItems } = require('./service/elastic_Query');
 const START_SERVER = async () => {
     const app = express();
 
-    const HOST = process.env.HOST || 'localhost';
-    const PORT = process.env.PORT || 8080;
+    const HOST = process.env.HOST ;
+    const PORT = process.env.PORT ;
 
     app.use(cors());
     configViewsEngine(app);

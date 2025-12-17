@@ -81,6 +81,25 @@ const updateArticleApi = (id, data) => {
   return instance.put(`/api/articles/${id}`, data);
 };
 
+// ================= VOUCHERS =================
+// If storeId provided, get vouchers for that store. Otherwise attempt generic endpoint.
+const getVouchersApi = (storeId) => {
+  if (storeId) return instance.get(`/api/vouchers/store/${storeId}`);
+  return instance.get(`/api/vouchers`);
+};
+
+const createVoucherApi = (data) => {
+  return instance.post(`/api/vouchers`, data);
+};
+
+const updateVoucherApi = (id, data) => {
+  return instance.put(`/api/vouchers/${id}`, data);
+};
+
+const deleteVoucherApi = (id) => {
+  return instance.delete(`/api/vouchers/${id}`);
+};
+
 // ================= EXPORT =================
 export {
   getItemsByStoreApi,
@@ -106,4 +125,8 @@ export {
   deleteArticleApi,
   getArticleDetailApi,
   updateArticleApi,
+  getVouchersApi,
+  createVoucherApi,
+  updateVoucherApi,
+  deleteVoucherApi,
 };

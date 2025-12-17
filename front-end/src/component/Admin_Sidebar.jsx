@@ -28,75 +28,29 @@ export default function AdminSidebar() {
     // ================== Dashboard ==================
     {
       label: <Link to="dashboard">Dashboard</Link>,
-      key: "/admin/dashboard",
+      key: "/Admin/dashboard",
       icon: <DashboardOutlined />,
     },
 
     // ================== Stores ==================
     {
-      label: "Stores",
-      key: "stores",
+      label: <Link to="stores">Stores</Link>,
+      key: "/Admin/stores",
       icon: <ShopOutlined />,
-      children: [
-        {
-          label: <Link to="stores">All Stores</Link>,
-          key: "/admin/stores",
-        },
-      ],
     },
 
-    // ================== Products ==================
-    {
-      label: "Products",
-      key: "products",
-      icon: <AppstoreOutlined />,
-      children: [
-        {
-          label: <Link to="categories">Categories</Link>,
-          key: "/admin/categories",
-          icon: <ClusterOutlined />,
-        },
-        {
-          label: <Link to="items">Items</Link>,
-          key: "/admin/items",
-        },
-        {
-          label: <Link to="variants">Item Variants</Link>,
-          key: "/admin/variants",
-        },
-        {
-          label: <Link to="item-images">Item Images</Link>,
-          key: "/admin/item-images",
-          icon: <PictureOutlined />,
-        },
-      ],
-    },
-
+    
     // ================== Orders ==================
     {
-      label: "Orders",
-      key: "orders",
+      label: <Link to="orders">All Orders</Link>,
+      key: "/Admin/orders",
       icon: <ShoppingCartOutlined />,
-      children: [
-        {
-          label: <Link to="orders">All Orders</Link>,
-          key: "/admin/orders",
-        },
-        {
-          label: <Link to="orders/pending">Pending Orders</Link>,
-          key: "/admin/orders/pending",
-        },
-        {
-          label: <Link to="orders/completed">Completed Orders</Link>,
-          key: "/admin/orders/completed",
-        },
-      ],
     },
 
     // ================== Users ==================
     {
       label: <Link to="users">Users</Link>,
-      key: "/admin/users",
+      key: "/Admin/users",
       icon: <UserOutlined />,
     },
 
@@ -108,11 +62,11 @@ export default function AdminSidebar() {
       children: [
         {
           label: <Link to="vouchers">All Vouchers</Link>,
-          key: "/admin/vouchers",
+          key: "/Admin/vouchers",
         },
         {
           label: <Link to="vouchers/create">Create Voucher</Link>,
-          key: "/admin/vouchers/create",
+          key: "/Admin/vouchers/create",
         },
       ],
     },

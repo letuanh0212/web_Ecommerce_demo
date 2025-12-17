@@ -129,7 +129,10 @@ const {
     getVoucherByCodeController,
     updateVoucherController,
     deleteVoucherController,
-    applyVoucherController
+    applyVoucherController,
+    saveVoucherController,
+    getUserVouchersController,
+    getUserSavedVoucherIdsController
 } = require("../controller/vouhcerController");
 
 routerAPI.post("/vouchers", verifyToken, checkRole(['seller']), createVoucherController);
@@ -138,6 +141,9 @@ routerAPI.get("/vouchers/code/:code", verifyToken, getVoucherByCodeController);
 routerAPI.put("/vouchers/:id", verifyToken, checkRole(['seller']), updateVoucherController);
 routerAPI.delete("/vouchers/:id", verifyToken, checkRole(['seller']), deleteVoucherController);
 routerAPI.post("/vouchers/apply", verifyToken, applyVoucherController);
+routerAPI.post("/vouchers/:id/save", verifyToken, saveVoucherController);
+routerAPI.get("/user-vouchers", verifyToken, getUserVouchersController);
+routerAPI.get("/user-saved-vouchers/store/:storeId", verifyToken, getUserSavedVoucherIdsController);
 
 // Additional routes for user and admin
 routerAPI.get("/vouchers/user", verifyToken, checkRole(['user']), async (req, res) => {

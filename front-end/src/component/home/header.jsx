@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Menu, Badge } from "antd";
+import { Menu, Badge, Button, Modal, List, Tag, Empty, message } from "antd";
 import {
   ShoppingCartOutlined,
   LogoutOutlined,
@@ -7,9 +7,11 @@ import {
   LoginOutlined,
   UserAddOutlined,
   ReadOutlined,
+  GiftOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import HeaderSearch from "../search.jsx";
+import axios from "../../unti/axios.cusomize.js";
 import { getCart } from "../../unti/cart.js";
 
 const Header = () => {
@@ -19,6 +21,9 @@ const Header = () => {
   const [current, setCurrent] = useState(location.pathname);
   const [userRole, setUserRole] = useState(null);
   const [cartCount, setCartCount] = useState(0);
+  const [voucherModalVisible, setVoucherModalVisible] = useState(false);
+  const [userVouchers, setUserVouchers] = useState([]);
+  const [loadingVouchers, setLoadingVouchers] = useState(false);
 
   // ======================
   // 1. CHECK LOGIN + CART
@@ -73,6 +78,31 @@ const Header = () => {
     navigate("/login");
   };
 
+  const fetchUserVouchers = async () => {
+    try {
+      setLoadingVouchers(true);
+      const res = await axios.get("/api/user-vouchers");
+      if (res && res.vouchers) setUserVouchers(res.vouchers);
+      else setUserVouchers([]);
+    } catch (err) {
+      console.warn("Could not fetch user vouchers:", err);
+      message.error("Không tải được voucher");
+    } finally {
+      setLoadingVouchers(false);
+    }
+  };
+
+  const openVoucherModal = () => {
+    const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+    if (!token) {
+      message.warning("Bạn cần đăng nhập để xem voucher");
+      navigate("/login");
+      return;
+    }
+    setVoucherModalVisible(true);
+    fetchUserVouchers();
+  };
+
   // ======================
   // 3. SEARCH HANDLER
   // ======================
@@ -113,11 +143,9 @@ const Header = () => {
   const userItems = [
     { label: <Link to="/blog">Blog</Link>, key: "blog", icon: <ReadOutlined /> },
 
-    {
-      label: <Link to="/orders">Lịch sử đơn hàng</Link>,
-      key: "orders",
-      icon: <ShoppingCartOutlined />,
-    },
+    { label: <Link to="/orders">Lịch sử đơn hàng</Link>, key: "orders", icon: <ShoppingCartOutlined /> },
+
+    { label: <span onClick={openVoucherModal}>Voucher</span>, key: "vouchers", icon: <GiftOutlined /> },
 
     {
       label: <span onClick={logout}>Sign Out</span>,
@@ -147,6 +175,7 @@ const Header = () => {
   };
 
   return (
+    <>
     <div style={headerStyle}>
       {/* LOGO */}
       <h2 style={{ margin: 0, fontWeight: "bold", fontSize: "24px" }}>
@@ -172,6 +201,7 @@ const Header = () => {
           </Badge>
         </Link>
 
+
         {/* ACCOUNT MENU */}
         <Menu
           onClick={(e) => setCurrent(e.key)}
@@ -187,6 +217,56 @@ const Header = () => {
         />
       </div>
     </div>
+
+    <Modal
+      title="Voucher của bạn"
+      open={voucherModalVisible}
+      onCancel={() => setVoucherModalVisible(false)}
+      footer={null}
+    >
+      {loadingVouchers ? (
+        <div>Đang tải...</div>
+      ) : userVouchers && userVouchers.length > 0 ? (
+        <List
+          dataSource={userVouchers}
+          renderItem={(v) => {
+            const now = new Date();
+            const isActive = new Date(v.start_date) <= now && new Date(v.end_date) >= now;
+            return (
+              <List.Item>
+                <List.Item.Meta
+                  title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <strong>{v.code}</strong>
+                      <Tag color={isActive ? "green" : "orange"}>{isActive ? "Hoạt động" : "Hết hạn"}</Tag>
+                    </div>
+                  }
+                  description={
+                    <div>
+                      <div>
+                        {v.discount_type === "percent" ? (
+                          <Tag color="blue">{v.discount_value}%</Tag>
+                        ) : (
+                          <Tag color="blue">{new Intl.NumberFormat('vi-VN').format(v.discount_value)} VND</Tag>
+                        )}
+                        <span style={{ marginLeft: 8, color: '#888' }}>Min: {new Intl.NumberFormat('vi-VN').format(v.min_order_value)} VND</span>
+                      </div>
+                      <div style={{ marginTop: 6, fontSize: 12, color: '#666' }}>
+                        Store: {v.store_name || 'Tất cả'} • Sử dụng: {v.used_count}/{v.max_uses} • Hết hạn: {new Date(v.end_date).toLocaleDateString('vi-VN')}
+                      </div>
+                    </div>
+                  }
+                />
+              </List.Item>
+            );
+          }}
+        />
+      ) : (
+        <Empty description="Không có voucher" />
+      )}
+    </Modal>
+
+    </>
   );
 };
 

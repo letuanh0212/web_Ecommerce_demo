@@ -1,7 +1,7 @@
 // NavbarSeller.jsx
 import React from "react";
 import { Menu } from "antd";
-import { AppstoreOutlined } from "@ant-design/icons";
+import { AppstoreOutlined, GiftOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 
 const NavbarSeller = () => {
@@ -10,12 +10,13 @@ const NavbarSeller = () => {
       key: 'products',
       label: 'Products',
       icon: <AppstoreOutlined />,
-      children: [
+        children: [
         { key: 'dashboard', label: <Link to="/Seller/dashboard">Dashboard</Link> },
         { key: 'list', label: <Link to="/Seller/products">Product List</Link> },
         { key: 'categories', label: <Link to="/Seller/store">Categories</Link> },
         { key: 'orders', label: <Link to="/Seller/orders">Orders</Link> },
         { key: 'articles', label: <Link to="/Seller/articles">Marketing Articles</Link>, },
+        { key: 'vouchers', label: <Link to="/Seller/vouchers">Vouchers</Link> },
       ],
     },
   ];

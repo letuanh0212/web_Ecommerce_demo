@@ -2,7 +2,6 @@ const orderService = require("../service/orderService");
 const { sendOrderPaymentEmail } = require("../service/emailService");
 const { poolPromise, sql } = require("../config/Sql");
 const { VNPay } = require("vnpay");
-const crypto = require('crypto');
 
 const vnpay = new VNPay({
     tmnCode: process.env.VNP_TMNCODE,
@@ -12,31 +11,30 @@ const vnpay = new VNPay({
     hashAlgorithm: 'SHA512',
 });
 
-// Temporary storage for pending orders
-const pendingOrders = new Map();
-
 // ---------- CREATE PAYMENT URL (CHUẨN VNPAY) ----------
 const createVnpayOrderService = async (req, res) => {
     try {
         const userId = req.user?.id;
-        const { items, shipping_name, shipping_phone, shipping_address, note } = req.body;
+        const { items, shipping_name, shipping_phone, shipping_address, note, voucher_id, discount_amount } = req.body;
 
         if (!items || items.length === 0) {
             return res.status(400).json({ error: "No items in order" });
         }
 
-        console.log("[vnpayController] create called", { userId, itemsCount: items.length });
+        console.log("[vnpayController] create called", { userId, itemsCount: items.length, voucher_id, discount_amount });
 
-        // Generate unique transaction reference
-        const txnRef = crypto.randomUUID();
+        // 1. Tạo đơn trước (voucher sẽ được xử lý bên trong service)
+        const order = await orderService.createCODOrderService(
+            userId,
+            { items, shipping_name, shipping_phone, shipping_address, note, voucher_id, discount_amount }
+        );
 
-        // Store order data temporarily
-        pendingOrders.set(txnRef, { userId, items, shipping_name, shipping_phone, shipping_address, note });
+        const orderId = order.orderId;
+        // Use finalAmount (đã trừ voucher) for payment
+        const amount = order.finalAmount;
 
-        // Calculate amount
-        let totalAmount = 0;
-        items.forEach(i => totalAmount += i.price * i.quantity);
-        const vnpAmount = totalAmount;
+        // 2. Build payment URL with final amount (after discount)
+        const vnpAmount = amount;
 
         let ipAddr = req.headers['x-forwarded-for'] ? req.headers['x-forwarded-for'].split(',')[0].trim() : req.socket.remoteAddress;
         if (ipAddr === '::1' || ipAddr === '::ffff:127.0.0.1' || ipAddr.startsWith('::ffff:')) {
@@ -47,21 +45,26 @@ const createVnpayOrderService = async (req, res) => {
             vnp_Amount: vnpAmount,
             vnp_IpAddr: ipAddr,
             vnp_ReturnUrl: process.env.VNP_RETURN_URL,
-            vnp_TxnRef: txnRef,
-            vnp_OrderInfo: `Thanh toán đơn hàng`,
+            vnp_TxnRef: orderId.toString(),
+            vnp_OrderInfo: `Thanh toán đơn hàng #${orderId}`,
         });
 
-        console.log("[vnpayController] created paymentUrl", {
-            txnRef,
-            vnpAmount,
+        console.log("[vnpayController] created order and paymentUrl", {
+            orderId,
+            totalAmount: order.totalAmount,
+            finalAmount: amount,
+            discount: discount_amount || 0,
             paymentUrl
         });
 
         return res.json({
             success: true,
-            txnRef,
+            orderId,
             paymentUrl,
-            vnpAmount
+            vnpAmount,
+            totalAmount: order.totalAmount,
+            finalAmount: order.finalAmount,
+            discountApplied: discount_amount || 0
         });
 
     } catch (err) {
@@ -82,25 +85,11 @@ const vnpayReturn = async (req, res) => {
             return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
         }
 
-        const txnRef = req.query.vnp_TxnRef;
-
-        // Get stored order data
-        const orderData = pendingOrders.get(txnRef);
-        if (!orderData) {
-            console.error('[vnpayController] No pending order found for txnRef:', txnRef);
-            return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
-        }
-
-        // Create the order now that payment is successful
-        const order = await orderService.createCODOrderService(
-            orderData.userId,
-            orderData
-        );
-
-        const orderId = order.orderId;
-
-        // Update order status to paid
         const pool = await poolPromise;
+
+        const orderId = req.query.vnp_TxnRef;
+
+        // Update order
         await pool.request()
             .input("id", sql.Int, orderId)
             .query(`UPDATE Orders SET status='paid', updatedAt=GETDATE() WHERE id=@id`);
@@ -145,11 +134,7 @@ const vnpayReturn = async (req, res) => {
             );
         }
 
-        // Clean up pending order
-        pendingOrders.delete(txnRef);
-
-        return res.redirect(`${process.env.FRONTEND_URL}/payment-success?orderId=${orderId}`);
-
+        return res.redirect(`${process.env.FRONTEND_URL}/`);
     } catch (err) {
         console.error(err);
         return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);

@@ -22,6 +22,10 @@ const CartPage = () => {
   const [shippingPhone, setShippingPhone] = useState("");
   const [note, setNote] = useState("");
 
+  const [userVouchers, setUserVouchers] = useState([]);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+
   useEffect(() => {
     const items = getCart();
     setCartItems(items);
@@ -36,12 +40,69 @@ const CartPage = () => {
       if (user.addresses?.length > 0) {
         setSelectedAddress(user.addresses[0].fullAddress);
       }
+
+      // Fetch user's saved vouchers
+      fetchUserVouchers();
     }
   }, []);
 
   const calculateTotal = (items) => {
     const total = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     setTotalPrice(total);
+  };
+
+  const fetchUserVouchers = async () => {
+    try {
+      const res = await axios.get("/api/user-vouchers");
+      if (res && res.vouchers) {
+        setUserVouchers(res.vouchers);
+      }
+    } catch (err) {
+      console.warn("Could not fetch user vouchers:", err);
+    }
+  };
+
+  const handleApplyVoucher = (voucherId) => {
+    const voucher = userVouchers.find(v => v.id === voucherId);
+    if (!voucher) {
+      message.error("Voucher không hợp lệ");
+      return;
+    }
+
+    // Check if order meets minimum value
+    if (totalPrice < voucher.min_order_value) {
+      message.warning(`Đơn hàng phải tối thiểu ${new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(voucher.min_order_value)}`);
+      return;
+    }
+
+    // Check if user has exceeded max uses
+    if (voucher.used_count >= voucher.max_uses) {
+      message.error("Bạn đã sử dụng hết lượt dùng voucher này");
+      return;
+    }
+
+    // Calculate discount
+    let discount = 0;
+    if (voucher.discount_type === "percent") {
+      discount = totalPrice * (voucher.discount_value / 100);
+    } else {
+      discount = voucher.discount_value;
+    }
+
+    // Discount cannot exceed order total
+    if (discount > totalPrice) {
+      discount = totalPrice;
+    }
+
+    setSelectedVoucher(voucher);
+    setDiscountAmount(discount);
+    message.success(`Áp dụng voucher ${voucher.code} thành công`);
+  };
+
+  const handleRemoveVoucher = () => {
+    setSelectedVoucher(null);
+    setDiscountAmount(0);
+    message.info("Đã hủy voucher");
   };
 
   const handleQuantityChange = (value, record) => {
@@ -109,7 +170,9 @@ const confirmCheckout = async () => {
         shipping_phone: shippingPhone,
         shipping_address: selectedAddress,
         note,
-        email: currentUser?.email || null
+        email: currentUser?.email || null,
+        voucher_id: selectedVoucher?.id || null,
+        discount_amount: discountAmount
       };
 
       console.log('[CartPage] confirmCheckout payload', payload, 'paymentMethod:', paymentMethod);
@@ -129,7 +192,7 @@ const confirmCheckout = async () => {
 
           setCheckoutModalVisible(false);
 
-          navigate("/");
+          navigate("/"); // đi đến lịch sử đơn hàng
         } else {
           message.error(resp?.message || "Đặt hàng thất bại.");
         }
@@ -242,10 +305,60 @@ const confirmCheckout = async () => {
           </Col>
           <Col xs={24} lg={8}>
             <Card style={{ borderRadius: 8, position: 'sticky', top: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+              {/* Voucher section */}
+              {userVouchers && userVouchers.length > 0 && (
+                <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid #eee" }}>
+                  <Text strong style={{ display: "block", marginBottom: 8 }}>Chọn voucher:</Text>
+                  <Select
+                    placeholder="Chọn voucher để áp dụng"
+                    style={{ width: "100%", marginBottom: 8 }}
+                    value={selectedVoucher?.id || undefined}
+                    onChange={handleApplyVoucher}
+                    options={userVouchers.map(v => ({
+                      value: v.id,
+                      label: (
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span><strong>{v.code}</strong> - {v.discount_type === 'percent' ? `${v.discount_value}%` : `${new Intl.NumberFormat('vi-VN').format(v.discount_value)} VND`}</span>
+                          <span style={{ color: '#999', fontSize: 12 }}>Min: {new Intl.NumberFormat('vi-VN').format(v.min_order_value)} VND</span>
+                        </div>
+                      )
+                    }))}
+                  />
+                  {selectedVoucher && (
+                    <div style={{ background: "#f0f5ff", padding: 8, borderRadius: 4, marginBottom: 8 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                        <Text>Voucher: <strong>{selectedVoucher.code}</strong></Text>
+                        <Button type="text" danger size="small" onClick={handleRemoveVoucher}>Hủy</Button>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginTop: 4 }}>
+                        <Text>Giảm giá:</Text>
+                        <Text type="success" strong>-{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(discountAmount)}</Text>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                <Text style={{ fontSize: 16 }}>Tạm tính:</Text>
+                <Text style={{ fontSize: 16 }}>
+                  {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(totalPrice)}
+                </Text>
+              </div>
+
+              {selectedVoucher && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, color: "#52c41a" }}>
+                  <Text style={{ fontSize: 14 }}>Giảm giá:</Text>
+                  <Text style={{ fontSize: 14, color: "#52c41a" }}>
+                    -{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(discountAmount)}
+                  </Text>
+                </div>
+              )}
+
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, paddingTop: 12, borderTop: "2px solid #eee" }}>
                 <Text strong style={{ fontSize: 18 }}>Tổng cộng:</Text>
                 <Text type="danger" strong style={{ fontSize: 24 }}>
-                  {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(totalPrice)}
+                  {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(totalPrice - discountAmount)}
                 </Text>
               </div>
               <Button type="primary" size="large" block icon={<ArrowRightOutlined />} loading={loading} onClick={handleCheckout}>

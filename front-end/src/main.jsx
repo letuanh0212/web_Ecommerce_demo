@@ -37,6 +37,7 @@ import OrderList from './pages/seller/OrderList.jsx';
 import Dashboard from './pages/seller/Dashboard.jsx';
 import ArticleList from './pages/seller/ArticleList.jsx';
 import AddArticle from './pages/seller/AddArticle.jsx';
+import VoucherSeller from './pages/seller/VoucherSeller.jsx';
 
 const router = createBrowserRouter([
   {
@@ -97,6 +98,7 @@ const router = createBrowserRouter([
       { path: 'articles', element: <ArticleList /> },
       { path: 'articles/create', element: <AddArticle /> },
       { path: 'articles/edit/:id', element: <AddArticle /> }
+      , { path: 'vouchers', element: <VoucherSeller /> }
     ]
   }
 ]);

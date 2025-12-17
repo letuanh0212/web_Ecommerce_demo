@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card, Row, Col, Typography, Spin, Button, Empty, Avatar, Tabs } from "antd";
+import { Card, Row, Col, Typography, Spin, Button, Empty, Avatar, Tabs, message } from "antd";
 import { ArrowLeftOutlined, ShopOutlined, EnvironmentOutlined, ShoppingCartOutlined } from "@ant-design/icons"; // Thêm ShoppingCartOutlined
 import axios from "../../unti/axios.cusomize.js"; 
 import { addToCart } from "../../unti/cart"; // <--- IMPORT HÀM CART
@@ -16,6 +16,8 @@ const StoreDetail = () => {
   const [displayItems, setDisplayItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [storeInfo, setStoreInfo] = useState(null);
+  const [storeVouchers, setStoreVouchers] = useState([]);
+  const [savedVoucherIds, setSavedVoucherIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,6 +46,36 @@ const StoreDetail = () => {
       setAllItems(itemsData);
       setDisplayItems(itemsData);
 
+      // fetch vouchers for this store (if endpoint requires auth, axios will include token if present)
+      try {
+        const resV = await axios.get(`/api/vouchers/store/${id}`);
+        // axios custom instance returns res.data when available; controller returns { message, vouchers }
+        let vouchers = [];
+        if (Array.isArray(resV)) vouchers = resV;
+        else if (resV && resV.vouchers) vouchers = resV.vouchers;
+        else if (resV && resV.data) vouchers = resV.data;
+        // filter active vouchers
+        const now = new Date();
+        vouchers = vouchers.filter(v => new Date(v.start_date) <= now && new Date(v.end_date) >= now && v.quantity > 0);
+        setStoreVouchers(vouchers.slice(0, 5));
+      } catch (err) {
+        // ignore voucher errors (may require auth)
+        console.warn('Could not load vouchers for store', err);
+      }
+
+      // Fetch user's already-saved vouchers for this store
+      try {
+        const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
+        if (userStr) {
+          const res = await axios.get(`/api/user-saved-vouchers/store/${id}`);
+          if (res && res.savedVoucherIds) {
+            setSavedVoucherIds(res.savedVoucherIds);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch saved voucher IDs:', err);
+      }
+
         try {
           // Use the categories endpoint (backend exposes /api/categories/store/:storeId)
           const resCats = await axios.get(`/api/categories/store/${id}`);
@@ -69,6 +101,49 @@ const StoreDetail = () => {
       }
   };
 
+  // Save voucher to database
+  const handleSaveVoucher = async (voucher) => {
+    try {
+      // Get user from localStorage to check if logged in
+      const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
+      if (!userStr) {
+        message.warning("Vui lòng đăng nhập để lưu voucher");
+        navigate("/login");
+        return;
+      }
+
+      // Check if already saved
+      if (savedVoucherIds.includes(voucher.id)) {
+        message.info("Bạn đã lưu voucher này rồi");
+        return;
+      }
+
+      // Call backend endpoint to save voucher to database and decrement quantity
+      const res = await axios.post(`/api/vouchers/${voucher.id}/save`);
+      
+      if (res && res.success) {
+        message.success("Đã lưu voucher vào tài khoản");
+        // Update state to add this voucher ID to saved list
+        setSavedVoucherIds([...savedVoucherIds, voucher.id]);
+        // Optionally refresh voucher list to show updated quantity
+        fetchData();
+      }
+    } catch (err) {
+      const errMsg = err?.response?.data?.message || err?.message || "Không lưu được voucher";
+      const status = err?.response?.status;
+      
+      if (status === 409 || errMsg.includes("already")) {
+        message.info("Bạn đã lưu voucher này rồi");
+        // Ensure saved state is up to date
+        if (!savedVoucherIds.includes(voucher.id)) {
+          setSavedVoucherIds([...savedVoucherIds, voucher.id]);
+        }
+      } else {
+        message.error(errMsg);
+      }
+    }
+  };
+
   return (
     <div style={{ padding: "20px 50px", background: "#f5f5f5", minHeight: "100vh" }}>
       <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 20 }}>
@@ -85,6 +160,40 @@ const StoreDetail = () => {
             </div>
         </div>
       </Card>
+
+      {/* Vouchers row */}
+      {storeVouchers && storeVouchers.length > 0 && (
+        <Card style={{ marginBottom: 20 }}>
+          <Title level={5}>Voucher cửa hàng</Title>
+          <Row gutter={[12, 12]}>
+            {storeVouchers.map(v => (
+              <Col key={v.id}>
+                <Card size="small" style={{ minWidth: 240 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{v.code}</div>
+                      <div style={{ color: '#888' }}>{v.discount_type === 'percent' ? `${v.discount_value}%` : `${new Intl.NumberFormat('vi-VN').format(v.discount_value)} VND`}</div>
+                      <div style={{ color: '#999', fontSize: 12 }}>Đơn tối thiểu: {new Intl.NumberFormat('vi-VN').format(v.min_order_value || 0)} VND</div>
+                    </div>
+                    <div>
+                      <Button 
+                        type={savedVoucherIds.includes(v.id) ? "default" : "primary"}
+                        disabled={savedVoucherIds.includes(v.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSaveVoucher(v);
+                        }}
+                      >
+                        {savedVoucherIds.includes(v.id) ? "Đã lưu" : "Lưu"}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+      )}
 
       {/* 2. THANH DANH MỤC */}
       <div style={{ background: '#fff', padding: '0 20px', borderRadius: 8, marginBottom: 20 }}>

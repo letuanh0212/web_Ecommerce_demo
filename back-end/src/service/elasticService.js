@@ -1,7 +1,6 @@
 
 require('dotenv').config();
 const client = require('../config/elasticClient');
-const { poolPromise } = require('../config/Sql');
 
 const INDEX_NAME = 'items';
 
@@ -21,22 +20,48 @@ async function createIndex(force = false) {
     await client.indices.create({
       index: INDEX_NAME,
       body: {
+        // settings: {
+        //   analysis: {
+        //     analyzer: {
+        //       my_analyzer: {
+        //         type: "standard",
+        //         stopwords: "_none_"
+        //       }
+        //     }
+        //   }
+        // },
         settings: {
           analysis: {
+            filter: {
+              vn_synonym: {
+                type: "synonym_graph",
+                synonyms: [
+                  "T-shirt, áo thun, áo phông",
+                  "điện thoại, smartphone, phone, dt",
+                  "iphone, i-phone",
+                  "laptop, máy tính xách tay, notebook",
+                  "tai nghe, earphone, headphone"
+                ]
+              }
+            },
             analyzer: {
               my_analyzer: {
-                type: "standard",
-                stopwords: "_none_"
+            tokenizer: "icu_tokenizer",
+                filter: [
+                  "lowercase",
+                  "vn_synonym"
+                ]
               }
             }
           }
         },
+
         mappings: {
           properties: {
             id: { type: "integer" },
-            name: { type: "text", analyzer: "my_analyzer" },
-            description: { type: "text", analyzer: "my_analyzer" },
-            category_name: { type: "text", analyzer: "my_analyzer" },
+            name: { type: "text", analyzer: "my_analyzer" ,search_analyzer: "my_analyzer"},
+            description: { type: "text", analyzer: "my_analyzer" ,search_analyzer: "my_analyzer"},
+            category_name: { type: "text", analyzer: "my_analyzer" ,search_analyzer: "my_analyzer"},
             price: { type: "float" },
             store_id: { type: "integer" },
             category_id: { type: "integer" },
@@ -56,6 +81,7 @@ async function createIndex(force = false) {
 
 async function searchItemsService(keyword) {
   if (!keyword) return [];
+  console.log("check controller>>>>>",keyword)
 
   try {
     const result = await client.search({

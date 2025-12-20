@@ -21,7 +21,7 @@ const getItemsWithText = async () => {
     text: `${it.name} ${it.description} ${it.category_name}`.trim()
   }));
 };
-
+ 
 // Lấy lịch sử mua hàng user
 const getUserHistory = async (userId) => {
   const pool = await poolPromise;

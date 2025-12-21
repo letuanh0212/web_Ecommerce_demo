@@ -74,45 +74,71 @@ routerAPI.get('/search', searchItems);
 
 
 
-routerAPI.get("/user/:userId", async (req, res) => {
-    try {
-        const userId = Number(req.params.userId);
-        const recommended = await recommendForUser(userId);
+// routerAPI.get("/user/:userId", async (req, res) => {
+//     try {
+//         const userId = Number(req.params.userId);
+//         const recommended = await recommendForUser(userId);
 
-        if (!recommended || recommended.length === 0)
-            return res.json([]);
+//         if (!recommended || recommended.length === 0)
+//             return res.json([]);
 
-        const ids = recommended.map(r => r.id).join(",");
+//         const ids = recommended.map(r => r.id).join(",");
 
-        const pool = await poolPromise;
-        const query = `
-            SELECT 
-                i.id, i.name, i.price, i.description,i.stock, 
-                c.name AS category_name
-            FROM Items i
-            LEFT JOIN Categories c ON c.id = i.category_id
-            WHERE i.id IN (${ids})
-        `;
+//         const pool = await poolPromise;
+//         const query = `
+//             SELECT 
+//                 i.id, i.name, i.price, i.description,i.stock, 
+//                 c.name AS category_name
+//             FROM Items i
+//             LEFT JOIN Categories c ON c.id = i.category_id
+//             WHERE i.id IN (${ids})
+//         `;
 
-        const result = await pool.request().query(query);
-        const rows = result.recordset;
+//         const result = await pool.request().query(query);
+//         const rows = result.recordset;
 
-        // Map ra theo đúng thứ tự score
-        const finalResult = recommended.map(r => {
-            const item = rows.find(i => i.id === r.id);
-            return {
-                ...item,        // id, name, price, category_name
-                score: r.score  // thêm score
-            };
-        });
+//         // Map ra theo đúng thứ tự score
+//         const finalResult = recommended.map(r => {
+//             const item = rows.find(i => i.id === r.id);
+//             return {
+//                 ...item,        // id, name, price, category_name
+//                 score: r.score  // thêm score
+//             };
+//         });
 
-        res.json(finalResult);
+//         res.json(finalResult);
 
-    } catch (err) {
-        console.error("Recommend API error:", err);
-        res.status(500).json({ error: "Server error" });
-    }
-});
+//     } catch (err) {
+//         console.error("Recommend API error:", err);
+//         res.status(500).json({ error: "Server error" });
+//     }
+// });
+
+
+
+
+// routerAPI.get("/user/:userId", async (req, res) => {
+//   try {
+//     const { userId } = req.params;
+
+//     // GỌI FASTAPI
+//     const response = await axios.get(
+//       `http://localhost:8000/recommend/${userId}`
+//     );
+
+//     res.json({
+//       success: true,
+//       data: response.data
+//     });
+//   } catch (error) {
+//     console.error(error.message);
+//     res.status(500).json({
+//       success: false,
+//       message: "Recommendation service error"
+//     });
+//   }
+// });
+
 
 
 // routerAPI.get("/register/email", sendSellerRegisterEmail);

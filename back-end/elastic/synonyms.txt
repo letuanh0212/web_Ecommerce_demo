@@ -1,0 +1,136 @@
+# Vietnamese <-> English synonyms (UTF-8)
+# Each non-comment line is a comma-separated group of synonyms.
+
+# Games & Trò chơi
+game, trò chơi, trò chơi bài, bài
+board game, trò chơi bàn cờ, board game, boardgame
+card game, trò chơi thẻ bài, card game
+werewolf, ma sói, sói
+uno, bài uno, card game
+monopoly, cờ tỷ phú, board game
+suy luận, deduction, reasoning, strategy
+chiến thuật, strategy, strategic
+
+# Sách & Books
+sách, book, books, cuốn sách
+atomic habits, sách, tự giúp
+sapiens, lịch sử, history
+harry potter, sách, fantasy, tiểu thuyết
+tập sách, collection, series
+tiểu thuyết, novel, fiction
+lịch sử, history, historical
+
+# Âm nhạc & Music
+nhạc, music, song, bài hát
+đĩa than, vinyl, lp, record
+taylor swift, ca sĩ, singer, artist
+cassette, băng cassette, tape
+
+# Quần áo - áo
+áo, áo sơ mi, áo phông, shirt, tshirt, top
+áo thun, áo phông, áo phông cotton, t-shirt, tshirt
+áo sơ mi, shirt, shirts
+áo polo, polo shirt
+áo hoodie, hoodie, áo khoác nón
+áo sweater, sweater, áo len
+áo khoác, jacket, coat, áo khoác ngoài
+áo croptop, crop top, croptop
+áo hình, graphic tee, áo in hình
+
+# Quần
+quần, pants, trousers
+quần jean, jeans, quần denim, denim
+quần tây, trousers, pants, chinos
+quần short, shorts, quần đùi
+quần jogger, jogger, quần thể thao
+quần legging, leggings, quần leggin
+quần cargo, cargo pants
+quần thun, sweatpants, quần thể thao
+quần nữ, women pants, women trousers
+
+# Váy
+váy, dress, skirt
+đầm, váy, dress, váy dài
+váy chữ A, a-line, váy xòe
+váy bút chì, pencil skirt, váy ôm
+váy xếp li, pleated skirt, váy gấp
+váy mini, mini skirt, váy ngắn
+váy maxi, maxi skirt, váy lửng
+
+# Giày & Dép
+giày, shoes, shoe, footwear
+dép, sandal, slipper
+giày sneaker, sneakers, sneaker
+giày thể thao, sports shoes, running shoes
+giày cao gót, heels, high heels
+giày bệt, flats, giày búp bê
+giày boot, boots, giày ống
+giày sandal, sandals, sandal dép
+dép tổ ong, honeycomb sandal, dép
+dép lào, dép quai ngang
+
+# Phụ kiện
+ví, wallet, cái ví
+đồng hồ, watch, cái đồng hồ, wristwatch
+vòng tay, bracelet, vòng
+dây chuyền, necklace, chuỗi, chain
+khuyên tai, earrings, bông tai
+nhẫn, ring, chiếc nhẫn, nhẫn vàng, nhẫn bạc
+nhẫn bạc, silver ring, bạc
+mũ, hat, cap, nón
+khăn, scarf, khăn quàng
+túi xách, handbag, túi, purse, bag
+ba lô, backpack, balo, rucksack
+thắt lưng, belt, dây thắt
+
+# Mỹ phẩm & Skincare
+kem dưỡng, moisturizer, moisturizing cream
+sữa rửa mặt, cleanser, face wash
+nước hoa, perfume, scent, cologne
+dầu gội, shampoo, gội
+dầu xã, conditioner
+kem chống nắng, sunscreen, kem chống uv
+son môi, lipstick, lipstick, lip balm
+mascara, chuốt mi, eyelash, lashes
+phấn tươi, blush, rouge
+
+# Điện tử & Electronics
+điện thoại, phone, smartphone, mobile, iphone, android
+máy tính bảng, tablet, ipad
+laptop, máy tính xách tay, computer, notebook
+laptop gaming, gaming laptop, máy tính gaming
+máy tính, computer, pc, desktop
+tai nghe, headphones, earbuds, headset, earphones
+loa, speaker, speakers, sound
+pin dự phòng, power bank, sạc dự phòng, charger
+cáp, cable, dây cáp, usb
+
+# Sách học tập & Books
+sách, book, books, tập sách
+vở, notebook, quyển vở
+bút, pen, cây bút, writing pen
+bút chì, pencil, chì, graphite
+balo học, school bag, cặp sách, backpack
+
+# Thể thao & Sports
+quần áo thể thao, sportswear, đồ thể thao, sports clothes
+áo tank top, tank, tank top
+quần gym, gym shorts, short
+giày chạy, running shoes, giày chạy bộ, sneakers
+
+# Nhà cửa & Home
+gối, pillow, cái gối, cushion
+chăn, blanket, cái chăn, quilt
+ga giường, bedsheet, sheet, linen
+khăn tắm, towel, khăn, bath towel
+bộ nồi, cookware, cookware set, pots
+đĩa, plate, plates, dish
+cốc, cup, mug, glass
+chảo, pan, frying pan, skillet
+
+# Trẻ em & Kids
+áo trẻ em, kids clothes, kid shirt, children shirt
+quần trẻ em, kids pants, children pants
+giày trẻ em, kids shoes, children shoes
+đồ chơi, toys, toy, game, plaything
+tã, diapers, tã em bé, nappy

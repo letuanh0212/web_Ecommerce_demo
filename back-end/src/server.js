@@ -30,7 +30,10 @@ console.log("\n1. Connected to Sql Server\n");
 
 poolPromise.then(async () => {
     console.log("\n2. Connected to SQL Database");
+<<<<<<< HEAD
     
+=======
+>>>>>>> 40f82a5 (recommende with python and elastich search)
     await createIndex(true);
     await syncItems();
     //await connectNgrok(process.env.PORT)

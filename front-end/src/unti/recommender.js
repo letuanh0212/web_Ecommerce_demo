@@ -1,20 +1,20 @@
-
-
-import instance from "./axios.cusomize";   // instance đã unwrap `response.data` trong interceptor
+import instance from "./axios.cusomize";
 
 const recommenderApi = async (userId) => {
   try {
-    const URL = `/api/user/${userId}`;
-    // instance.get trả về trực tiếp `response.data` vì interceptor đã unwrap
-    const response = await instance.get(URL);
+    const response = await instance.get(
+      `http://localhost:8000/recommend/${userId}`
+    );
 
-    // response có thể là { recommended: [...] } hoặc mảng trực tiếp
-    if (Array.isArray(response?.recommended)) {
-      return response.recommended;
-    }
+    // vì interceptor đã return response.data
+    // nên response chính là data từ FastAPI
 
     if (Array.isArray(response)) {
       return response;
+    }
+
+    if (Array.isArray(response?.recommended)) {
+      return response.recommended;
     }
 
     return [];

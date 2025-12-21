@@ -111,3 +111,5 @@ async function searchItemsService(keyword) {
 }
 
 module.exports = { createIndex, searchItemsService };
+
+
